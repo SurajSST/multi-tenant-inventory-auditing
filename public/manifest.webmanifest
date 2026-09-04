@@ -1,0 +1,45 @@
+{
+  "name": "Prativa Stock & Procurement",
+  "short_name": "Prativa Stock",
+  "description": "Internal stock auditing, asset tracking, and procurement system for Prativa Secondary School.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#090D16",
+  "theme_color": "#090D16",
+  "lang": "en-NP",
+  "dir": "ltr",
+  "categories": ["business", "productivity", "utilities"],
+  "prefer_related_applications": false,
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Physical Count",
+      "short_name": "Count",
+      "description": "Enter offline physical count for a room",
+      "url": "/inventory/count?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "My Approvals Queue",
+      "short_name": "Approvals",
+      "description": "Review pending procurement requests",
+      "url": "/demands/queue?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Stock Register",
+      "short_name": "Stock",
+      "description": "Lookup school assets & equipment",
+      "url": "/inventory/register?source=shortcut",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
