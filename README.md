@@ -1,4 +1,4 @@
-# Stock Auditing & Procurement
+# Multi-Tenant Inventory & Auditing System
 
 Internal system covering a school's full stock lifecycle: physical inventory counting, demand
 forms, a tiered approval ladder, order placement and receipt verification, bill cross-checking,
@@ -220,6 +220,58 @@ Real `.xlsx` files with frozen headers, autofilters and number formatting — no
 | Audit trail | The complete, unedited record |
 
 Taking records out of the system is itself written to the audit trail.
+
+---
+
+## Deployment & CI/CD
+
+Automated deployment is configured with **GitHub Actions** (`.github/workflows/deploy.yml`). Pushing to the `main` branch (or triggering manually) will automatically build frontend assets, bundle production dependencies, and securely deploy to your production server via FTP.
+
+### Pipeline Overview
+1. **🐘 PHP 8.4 Setup:** Configures PHP with all required extensions (`mbstring`, `xml`, `ctype`, `iconv`, `mysql`, `pdo_mysql`, `bcmath`, `fileinfo`, `zip`, `gd`).
+2. **🟢 Node 22 & Caching:** Sets up Node.js and caches `npm` modules for high-speed builds.
+3. **📦 Composer Dependency Build:** Caches and installs production dependencies (`--no-dev --optimize-autoloader`).
+4. **⚡ Vite Build:** Installs npm dependencies and compiles frontend assets into `public/build`.
+5. **📂 Secure FTP Sync:** Deploys files using `SamKirkland/FTP-Deploy-Action@v4.3.6`.
+
+### Required GitHub Secrets
+In your GitHub repository, navigate to **Settings > Secrets and variables > Actions** and add:
+
+| Secret | Description | Example |
+|---|---|---|
+| `FTP_SERVER` | FTP hostname or IP | `ftp.yourdomain.com` |
+| `FTP_USERNAME` | FTP account username | `deployer@yourdomain.com` |
+| `FTP_PASSWORD` | FTP account password | `••••••••••••` |
+| `SERVER_DIR` | Target server directory | `public_html/` or `/var/www/inventory/` |
+
+### Security & Exclusions
+To safeguard credentials and prevent bloated transfers, the workflow explicitly excludes:
+- **Credentials & Secrets:** `.env*`, `storage/*.key` (production `.env` stays on server).
+- **VCS & CI Configurations:** `.git*`, `.github/**`.
+- **Testing & Tools:** `tests/**`, `phpunit.xml`, `.phpunit*`, `node_modules/**`, `package.json`, `package-lock.json`, `vite.config.js`.
+- **Developer Documentation:** `README.md`, `CLAUDE.md`, `AGENTS.md`.
+- **Runtime State:** `storage/logs/**`, `storage/framework/cache/**`, `storage/framework/sessions/**`, `storage/framework/views/**`.
+
+### Production Server Post-Deployment Setup
+Run these commands once on the production server (or after schema updates):
+```bash
+# Generate app key if setting up for the first time
+php artisan key:generate
+
+# Symlink public storage
+php artisan storage:link
+
+# Run database migrations
+php artisan migrate --force
+
+# Cache configuration, routes, and views for optimal performance
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# Verify all separation-of-duties triggers and checks
+php artisan integrity:verify
+```
 
 ---
 

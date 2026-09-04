@@ -1,0 +1,84 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🚚 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐘 Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, fileinfo, zip, gd
+          coverage: none
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: 📦 Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: 📦 Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - name: 📦 Install NPM dependencies & Build
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build
+
+      - name: 📂 Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.SERVER_DIR }}
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            .github/**
+            **/node_modules/**
+            **/tests/**
+            **/phpunit.xml
+            **/.phpunit*
+            **/.env*
+            storage/*.key
+            storage/logs/**
+            storage/framework/cache/data/**
+            storage/framework/sessions/**
+            storage/framework/views/**
+            storage/pail/**
+            package.json
+            package-lock.json
+            vite.config.js
+            **/.editorconfig
+            **/.idea/**
+            **/.vscode/**
+            **/.DS_Store
+            **/Thumbs.db
+            README.md
+            CLAUDE.md
+            AGENTS.md
