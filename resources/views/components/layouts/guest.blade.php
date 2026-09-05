@@ -28,7 +28,8 @@
             localStorage.getItem('prativa.theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
     </script>
 
-    @vite(['resources/css/app.css'])
+    @livewireStyles
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="font-sans antialiased">
 
@@ -59,6 +60,7 @@
 
 <x-toast />
 
+@livewireScripts
 <script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
