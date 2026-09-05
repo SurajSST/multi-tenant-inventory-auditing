@@ -52,11 +52,11 @@
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-400">
                         <tr>
-                            <th scope="col" class="px-5 py-3 font-medium">Timestamp</th>
-                            <th scope="col" class="px-4 py-3 font-medium">Actor</th>
-                            <th scope="col" class="px-4 py-3 font-medium">Action</th>
-                            <th scope="col" class="px-4 py-3 font-medium">Entity</th>
-                            <th scope="col" class="px-5 py-3 font-medium">Detail</th>
+                            <th scope="col" class="px-5 py-3 font-semibold">Date & Time</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Performed By</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Action</th>
+                            <th scope="col" class="px-4 py-3 font-semibold">Module</th>
+                            <th scope="col" class="px-5 py-3 font-semibold">Activity Details</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-white/5">
