@@ -19,6 +19,10 @@ class Create extends Component
 {
     public string $department = '';
 
+    public string $departmentSelect = '';
+
+    public string $customDepartment = '';
+
     public string $justification = '';
 
     public string $needByDate = '';
@@ -26,9 +30,72 @@ class Create extends Component
     /** @var array<int, array{row_id: string, item_type_id: string, item_name: string, quantity: string, unit_rate: string, specification: string}> */
     public array $lines = [];
 
+    #[Computed]
+    public function departments(): array
+    {
+        $defaults = [
+            'Science Department',
+            'Computer Lab / IT',
+            'Mathematics Department',
+            'English Department',
+            'Nepali Department',
+            'Social Studies Department',
+            'Sports & Physical Education',
+            'Library',
+            'Administration',
+            'Account Section',
+            'Examination Cell',
+            'Grade 8 & 9 Classrooms',
+            'Primary Section',
+            'Secondary Section',
+            'Store / Inventory',
+            'General Maintenance',
+        ];
+
+        try {
+            $existing = \App\Models\DemandForm::distinct()->pluck('department')->filter()->values()->all();
+        } catch (\Throwable) {
+            $existing = [];
+        }
+
+        return collect(array_merge($defaults, $existing))
+            ->map(fn ($d) => trim($d))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function updatedDepartment(string $value): void
+    {
+        if (in_array($value, $this->departments(), true)) {
+            $this->departmentSelect = $value;
+            $this->customDepartment = '';
+        } else {
+            $this->departmentSelect = 'OTHER';
+            $this->customDepartment = $value;
+        }
+    }
+
+    public function updatedDepartmentSelect(string $value): void
+    {
+        if ($value === 'OTHER') {
+            $this->department = trim($this->customDepartment);
+        } else {
+            $this->department = $value;
+        }
+    }
+
+    public function updatedCustomDepartment(string $value): void
+    {
+        if ($this->departmentSelect === 'OTHER') {
+            $this->department = trim($value);
+        }
+    }
+
     public function mount(): void
     {
-        $this->department = (string) (auth()->user()?->designation ?? '');
+        $this->departmentSelect = '';
+        $this->department = '';
         $this->addLine();
     }
 
@@ -114,6 +181,12 @@ class Create extends Component
 
     public function save(DemandService $demands): void
     {
+        if ($this->departmentSelect === 'OTHER') {
+            $this->department = trim($this->customDepartment);
+        } elseif ($this->departmentSelect !== '') {
+            $this->department = trim($this->departmentSelect);
+        }
+
         $this->validate([
             'department' => ['required', 'string', 'max:120'],
             'justification' => ['required', 'string', 'min:10', 'max:2000'],

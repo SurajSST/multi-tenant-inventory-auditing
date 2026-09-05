@@ -46,9 +46,20 @@
                         </x-select>
                     </x-field>
 
-                    <x-field label="Unit" for="unitOfMeasure" required :error="$errors->first('unitOfMeasure')">
-                        <x-input id="unitOfMeasure" wire:model="unitOfMeasure" placeholder="PCS" />
+                    <x-field label="Unit of measure" for="unitSelect" required :error="$errors->first('unitOfMeasure')">
+                        <x-select id="unitSelect" wire:model.live="unitSelect">
+                            @foreach ($this->standardUnits as $code => $label)
+                                <option value="{{ $code }}">{{ $code }} — {{ $label }}</option>
+                            @endforeach
+                            <option value="OTHER">+ Other / Custom unit...</option>
+                        </x-select>
                     </x-field>
+
+                    @if ($unitSelect === 'OTHER')
+                        <x-field label="Custom unit code" for="customUnit" required :error="$errors->first('unitOfMeasure')">
+                            <x-input id="customUnit" wire:model.live.debounce.300ms="customUnit" placeholder="e.g. GROSS, DRUM" class="uppercase" />
+                        </x-field>
+                    @endif
 
                     <x-field label="Indicative rate (Rs.)" for="indicativeRate"
                              hint="Pre-fills demand forms." :error="$errors->first('indicativeRate')">

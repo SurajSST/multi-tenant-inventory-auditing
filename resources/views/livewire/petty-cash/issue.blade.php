@@ -18,9 +18,21 @@
                     <x-input id="billDate" type="date" wire:model="billDate" />
                 </x-field>
 
-                <x-field label="Vendor / shop" for="vendorName" required :error="$errors->first('vendorName')">
-                    <x-input id="vendorName" wire:model="vendorName" />
+                <x-field label="Vendor / shop" for="vendorSelect" required :error="$errors->first('vendorName')">
+                    <x-select id="vendorSelect" wire:model.live="vendorSelect">
+                        <option value="">Select vendor or shop</option>
+                        @foreach ($this->vendors as $v)
+                            <option value="{{ $v->name }}">{{ $v->name }}</option>
+                        @endforeach
+                        <option value="OTHER">+ Other / New vendor...</option>
+                    </x-select>
                 </x-field>
+
+                @if ($vendorSelect === 'OTHER' || (! $vendorSelect && ! $this->vendors->count()))
+                    <x-field label="Vendor / shop name" for="customVendor" required :error="$errors->first('vendorName')">
+                        <x-input id="customVendor" wire:model.live.debounce.300ms="customVendor" placeholder="e.g. City Stationery" />
+                    </x-field>
+                @endif
 
                 <x-field label="Amount (Rs.)" for="amount" required
                          :hint="'Ceiling is ' . \App\Support\Money::npr($this->ceiling) . ' per bill.'"
@@ -42,15 +54,39 @@
 
         <x-card title="Who is claiming it">
             <div class="grid gap-5 sm:grid-cols-2">
-                <x-field label="Claimant's name" for="claimantName" required
+                <x-field label="Claimant" for="claimantSelect" required
                          hint="The person physically standing in front of you."
                          :error="$errors->first('claimantName')">
-                    <x-input id="claimantName" wire:model="claimantName" />
+                    <x-select id="claimantSelect" wire:model.live="claimantSelect">
+                        <option value="">Select staff member</option>
+                        @foreach ($this->staffMembers as $member)
+                            <option value="{{ $member->user->full_name }}">
+                                {{ $member->user->full_name }} ({{ $member->designation }})
+                            </option>
+                        @endforeach
+                        <option value="OTHER">+ Other / External claimant...</option>
+                    </x-select>
                 </x-field>
+
+                @if ($claimantSelect === 'OTHER')
+                    <x-field label="Claimant's full name" for="customClaimant" required :error="$errors->first('claimantName')"
+                             hint="Enter name of external or unlisted claimant.">
+                        <x-input id="customClaimant" wire:model.live.debounce.300ms="customClaimant" placeholder="Full name" />
+                    </x-field>
+                @endif
 
                 <x-field label="Purpose" for="purpose" required
                          hint="What the money was spent on." :error="$errors->first('purpose')">
-                    <x-input id="purpose" wire:model="purpose" />
+                    <div class="space-y-2">
+                        <x-select id="purposeSelect" wire:model.live="purposeSelect">
+                            <option value="">Select common purpose (or type below)</option>
+                            @foreach ($this->commonPurposes as $p)
+                                <option value="{{ $p }}">{{ $p }}</option>
+                            @endforeach
+                            <option value="OTHER">+ Custom purpose...</option>
+                        </x-select>
+                        <x-input id="purpose" wire:model="purpose" placeholder="Specific purpose description" />
+                    </div>
                 </x-field>
             </div>
 

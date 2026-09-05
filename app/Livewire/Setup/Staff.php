@@ -40,6 +40,10 @@ class Staff extends Component
 
     public string $designation = '';
 
+    public string $designationSelect = '';
+
+    public string $customDesignation = '';
+
     public string $email = '';
 
     public string $phone = '';
@@ -53,6 +57,64 @@ class Staff extends Component
 
     /** Set when the email entered already belongs to somebody. */
     public ?string $existingPersonNote = null;
+
+    #[Computed]
+    public function standardDesignations(): array
+    {
+        $defaults = [
+            'Managing Director',
+            'Chairman',
+            'Principal',
+            'Vice Principal',
+            'Administrative Officer',
+            'Head of Department — Science',
+            'Head of Department — Mathematics',
+            'Head of Department — English',
+            'Head of Department — Nepali',
+            'Head of Department — Social Studies',
+            'Head of Department — Computer / IT',
+            'Teacher — Grade 8',
+            'Teacher — Grade 9',
+            'Teacher — Grade 10',
+            'Teacher — Primary',
+            'Teacher — Secondary',
+            'Store / Purchase Officer',
+            'Store Keeper (Receiving)',
+            'Accounts Officer',
+            'Accounts Assistant',
+            'Assigned Stock Auditor',
+            'Lab Assistant',
+            'Librarian',
+        ];
+
+        try {
+            $existing = TenantUser::distinct()->pluck('designation')->filter()->values()->all();
+        } catch (\Throwable) {
+            $existing = [];
+        }
+
+        return collect(array_merge($defaults, $existing))
+            ->map(fn ($d) => trim($d))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function updatedDesignationSelect(string $val): void
+    {
+        if ($val === 'OTHER') {
+            $this->designation = trim($this->customDesignation);
+        } else {
+            $this->designation = $val;
+        }
+    }
+
+    public function updatedCustomDesignation(string $val): void
+    {
+        if ($this->designationSelect === 'OTHER') {
+            $this->designation = trim($val);
+        }
+    }
 
     #[Computed]
     public function blocks(): Collection
@@ -130,6 +192,14 @@ class Staff extends Component
         $this->staffCode = $membership->staff_code;
         $this->fullName = $membership->user->full_name;
         $this->designation = $membership->designation;
+        if (in_array($this->designation, $this->standardDesignations, true)) {
+            $this->designationSelect = $this->designation;
+            $this->customDesignation = '';
+        } else {
+            $this->designationSelect = 'OTHER';
+            $this->customDesignation = $this->designation;
+        }
+
         $this->email = $membership->user->email;
         $this->phone = (string) $membership->user->phone;
         $this->roles = $membership->roles()->map(fn (Role $r) => $r->value)->all();
@@ -144,12 +214,19 @@ class Staff extends Component
     {
         $this->reset([
             'editingId', 'showForm', 'staffCode', 'fullName', 'designation',
+            'designationSelect', 'customDesignation',
             'email', 'phone', 'roles', 'approvalTier', 'auditBlocks', 'existingPersonNote',
         ]);
     }
 
     public function save(AuditLogger $audit): void
     {
+        if ($this->designationSelect === 'OTHER') {
+            $this->designation = trim($this->customDesignation);
+        } elseif ($this->designationSelect !== '') {
+            $this->designation = trim($this->designationSelect);
+        }
+
         $tenant = app(TenantContext::class)->current();
         $membership = $this->editingId ? $this->posting($this->editingId) : null;
 
@@ -197,7 +274,7 @@ class Staff extends Component
                     'phone' => $this->phone ?: null,
                     'password' => Hash::make(config('prativa.seed_password')),
                     'is_active' => true,
-                    'must_reset_password' => true,
+                    'must_reset_password' => false,
                 ]);
             } else {
                 // Name and phone belong to the person, so they are shared across

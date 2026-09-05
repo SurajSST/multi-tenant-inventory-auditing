@@ -36,9 +36,50 @@ class ItemTypes extends Component
 
     public string $unitOfMeasure = 'PCS';
 
+    public string $unitSelect = 'PCS';
+
+    public string $customUnit = '';
+
     public string $indicativeRate = '';
 
     public string $reorderLevel = '';
+
+    #[Computed]
+    public function standardUnits(): array
+    {
+        return [
+            'PCS' => 'Pieces / Units',
+            'BOX' => 'Boxes',
+            'SET' => 'Sets',
+            'PKT' => 'Packets',
+            'KG' => 'Kilograms',
+            'LTR' => 'Liters',
+            'ROLL' => 'Rolls',
+            'MTR' => 'Meters',
+            'DOZEN' => 'Dozens',
+            'PAIR' => 'Pairs',
+            'BUNDLE' => 'Bundles',
+            'RIM' => 'Reams (Paper)',
+            'BOTTLE' => 'Bottles',
+            'CAN' => 'Cans / Tins',
+        ];
+    }
+
+    public function updatedUnitSelect(string $val): void
+    {
+        if ($val === 'OTHER') {
+            $this->unitOfMeasure = strtoupper(trim($this->customUnit));
+        } else {
+            $this->unitOfMeasure = $val;
+        }
+    }
+
+    public function updatedCustomUnit(string $val): void
+    {
+        if ($this->unitSelect === 'OTHER') {
+            $this->unitOfMeasure = strtoupper(trim($val));
+        }
+    }
 
     #[Computed]
     public function categories(): Collection
@@ -59,6 +100,8 @@ class ItemTypes extends Component
         $this->reset(['editingId', 'name', 'codePrefix', 'subcategoryId', 'indicativeRate', 'reorderLevel']);
         $this->lifespan = 'DURABLE';
         $this->unitOfMeasure = 'PCS';
+        $this->unitSelect = 'PCS';
+        $this->customUnit = '';
         $this->categoryId = $this->categories->first()?->id ?? '';
         $this->showForm = true;
         $this->resetErrorBag();
@@ -75,6 +118,13 @@ class ItemTypes extends Component
         $this->subcategoryId = (string) $item->subcategory_id;
         $this->lifespan = $item->lifespan->value;
         $this->unitOfMeasure = $item->unit_of_measure;
+        if (array_key_exists($this->unitOfMeasure, $this->standardUnits())) {
+            $this->unitSelect = $this->unitOfMeasure;
+            $this->customUnit = '';
+        } else {
+            $this->unitSelect = 'OTHER';
+            $this->customUnit = $this->unitOfMeasure;
+        }
         $this->indicativeRate = $item->indicative_rate === null ? '' : (string) $item->indicative_rate;
         $this->reorderLevel = $item->reorder_level === null ? '' : (string) $item->reorder_level;
         $this->showForm = true;
@@ -91,6 +141,12 @@ class ItemTypes extends Component
 
     public function save(AuditLogger $audit): void
     {
+        if ($this->unitSelect === 'OTHER') {
+            $this->unitOfMeasure = strtoupper(trim($this->customUnit));
+        } elseif ($this->unitSelect !== '') {
+            $this->unitOfMeasure = $this->unitSelect;
+        }
+
         $suffix = $this->editingId ? ','.$this->editingId : '';
 
         $this->validate([

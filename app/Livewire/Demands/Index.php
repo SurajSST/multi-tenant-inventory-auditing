@@ -16,8 +16,26 @@ class Index extends Component
     #[Url(except: '')]
     public string $status = '';
 
+    #[Url(except: '')]
+    public string $department = '';
+
     #[Url(except: false)]
     public bool $mine = false;
+
+    #[\Livewire\Attributes\Computed]
+    public function departments(): array
+    {
+        try {
+            return \App\Models\DemandForm::distinct()
+                ->pluck('department')
+                ->filter()
+                ->sort()
+                ->values()
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
 
     public function updated(): void
     {
@@ -33,6 +51,7 @@ class Index extends Component
                 $user,
                 $this->status ? DemandStatus::from($this->status) : null,
                 $this->mine,
+                $this->department ?: null,
             ),
             'seesEverything' => $user->seesEverything(),
         ])->title('Demand Forms');

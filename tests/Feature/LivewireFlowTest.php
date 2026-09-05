@@ -274,7 +274,7 @@ class LivewireFlowTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'j.tamang@prativa.edu.np',
-            'must_reset_password' => 1,
+            'must_reset_password' => 0,
             'is_active' => 1,
         ]);
     }

@@ -8,9 +8,21 @@
 
         <x-card title="The request">
             <div class="grid gap-5 sm:grid-cols-2">
-                <x-field label="Department" for="department" required :error="$errors->first('department')">
-                    <x-input id="department" wire:model="department" />
+                <x-field label="Department" for="departmentSelect" required :error="$errors->first('department')">
+                    <x-select id="departmentSelect" wire:model.live="departmentSelect">
+                        <option value="">Select department or section</option>
+                        @foreach ($this->departments as $dept)
+                            <option value="{{ $dept }}">{{ $dept }}</option>
+                        @endforeach
+                        <option value="OTHER">+ Other / Custom department...</option>
+                    </x-select>
                 </x-field>
+
+                @if ($departmentSelect === 'OTHER')
+                    <x-field label="Custom Department Name" for="customDepartment" required :error="$errors->first('department')">
+                        <x-input id="customDepartment" wire:model.live.debounce.300ms="customDepartment" placeholder="e.g. Robotics Club" />
+                    </x-field>
+                @endif
 
                 <x-field label="Needed by" for="needByDate" hint="Optional." :error="$errors->first('needByDate')">
                     <x-input id="needByDate" type="date" wire:model="needByDate" />

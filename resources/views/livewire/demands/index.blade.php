@@ -11,12 +11,21 @@
     </x-page-header>
 
     <x-card class="mb-5">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4 sm:grid-cols-3">
             <x-field label="Status" for="status">
                 <x-select id="status" wire:model.live="status">
                     <option value="">Every status</option>
                     @foreach (\App\Enums\DemandStatus::cases() as $case)
                         <option value="{{ $case->value }}">{{ $case->label() }}</option>
+                    @endforeach
+                </x-select>
+            </x-field>
+
+            <x-field label="Department" for="department">
+                <x-select id="department" wire:model.live="department">
+                    <option value="">All departments</option>
+                    @foreach ($this->departments as $dept)
+                        <option value="{{ $dept }}">{{ $dept }}</option>
                     @endforeach
                 </x-select>
             </x-field>

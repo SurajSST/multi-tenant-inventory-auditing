@@ -23,9 +23,21 @@
                         <x-input id="fullName" wire:model="fullName" />
                     </x-field>
 
-                    <x-field label="Designation" for="designation" required :error="$errors->first('designation')">
-                        <x-input id="designation" wire:model="designation" placeholder="Teacher — Grade 9" />
+                    <x-field label="Designation" for="designationSelect" required :error="$errors->first('designation')">
+                        <x-select id="designationSelect" wire:model.live="designationSelect">
+                            <option value="">Select designation</option>
+                            @foreach ($this->standardDesignations as $desig)
+                                <option value="{{ $desig }}">{{ $desig }}</option>
+                            @endforeach
+                            <option value="OTHER">+ Other / Custom designation...</option>
+                        </x-select>
                     </x-field>
+
+                    @if ($designationSelect === 'OTHER')
+                        <x-field label="Custom Designation" for="customDesignation" required :error="$errors->first('designation')">
+                            <x-input id="customDesignation" wire:model.live.debounce.300ms="customDesignation" placeholder="e.g. Sports Coordinator" />
+                        </x-field>
+                    @endif
 
                     <x-field label="Email" for="email" required
                              hint="This is how they sign in." :error="$errors->first('email')">
