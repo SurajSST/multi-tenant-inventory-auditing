@@ -166,22 +166,23 @@
         </div>
     </header>
 
-    {{-- Desktop Sidebar (Matching reference/frontend 1:1) --}}
+    {{-- Desktop Sidebar (Responsive to Light/Dark Mode) --}}
     <aside
-        class="hidden lg:flex w-[260px] min-w-[260px] shrink-0 flex-col border-r border-white/[0.06] bg-[#090D16] text-[#94A3B8] sticky top-0 h-screen no-print"
+        class="hidden lg:flex w-[260px] min-w-[260px] shrink-0 flex-col border-r border-slate-200/80 bg-white text-slate-600 sticky top-0 h-screen no-print transition-colors duration-150 dark:border-white/[0.06] dark:bg-[#090D16] dark:text-[#94A3B8]"
     >
         {{-- Workspace Brand Box --}}
-        <div class="flex items-center justify-center border-b border-white/[0.06] px-5 py-4.5">
+        <div class="flex items-center justify-center border-b border-slate-200/80 px-5 py-4.5 dark:border-white/[0.06]">
             @if ($currentSchool?->logo_url)
                 <img src="{{ $currentSchool->logo_url }}" alt="{{ $currentSchool->name }}" class="h-10 w-auto max-w-full object-contain" />
             @elseif ($currentSchool)
-                <img src="/img/logo/prativaLogoWhite.png" alt="{{ $currentSchool->name }}" class="h-10 w-auto max-w-full object-contain" />
+                <img src="/img/logo/prativalogo.png" alt="{{ $currentSchool->name }}" class="h-10 w-auto max-w-full object-contain dark:hidden" />
+                <img src="/img/logo/prativaLogoWhite.png" alt="{{ $currentSchool->name }}" class="h-10 w-auto max-w-full object-contain hidden dark:block" />
             @else
                 <div class="flex items-center gap-3">
-                    <span class="grid size-9 place-items-center rounded-lg bg-sky-500/20 text-sky-400 font-bold font-mono text-sm border border-sky-500/30">P</span>
+                    <span class="grid size-9 place-items-center rounded-lg bg-sky-500/15 text-sky-600 font-bold font-mono text-sm border border-sky-500/25 dark:bg-sky-500/20 dark:text-sky-400 dark:border-sky-500/30">P</span>
                     <div>
-                        <span class="block font-heading text-sm font-bold tracking-tight text-white">Platform Console</span>
-                        <span class="block font-mono text-[9px] uppercase tracking-wider text-sky-400">System Admin</span>
+                        <span class="block font-heading text-sm font-bold tracking-tight text-slate-900 dark:text-white">Platform Console</span>
+                        <span class="block font-mono text-[9px] uppercase tracking-wider text-sky-600 dark:text-sky-400">System Admin</span>
                     </div>
                 </div>
             @endif
@@ -191,14 +192,14 @@
             <div class="px-3 pt-3">
                 <form method="POST" action="{{ route('platform.exit') }}">
                     @csrf
-                    <button type="submit" class="flex w-full items-center justify-between gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-left text-xs font-semibold text-sky-400 hover:bg-sky-500/20 hover:text-white transition-all">
+                    <button type="submit" class="flex w-full items-center justify-between gap-2 rounded-lg border border-sky-500/25 bg-sky-50 px-3 py-2 text-left text-xs font-semibold text-sky-700 hover:bg-sky-100 hover:text-sky-900 transition-all dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-400 dark:hover:bg-sky-500/20 dark:hover:text-white">
                         <span class="flex items-center gap-1.5 truncate">
                             <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
                             Exit to Console
                         </span>
-                        <span class="rounded bg-sky-500/20 px-1.5 py-0.5 font-mono text-[9px]">Global</span>
+                        <span class="rounded bg-sky-500/15 px-1.5 py-0.5 font-mono text-[9px] text-sky-700 dark:bg-sky-500/20 dark:text-sky-300">Global</span>
                     </button>
                 </form>
             </div>
@@ -207,14 +208,14 @@
         {{-- Global Quick Search (Ctrl+K) --}}
         <div class="px-3 pt-3 pb-1">
             <button type="button" @click="cmdk = true"
-                    class="flex w-full items-center justify-between rounded-lg border border-white/[0.08] bg-white/[0.05] px-3 py-2 text-left text-[#94A3B8] transition-all hover:bg-white/[0.09] hover:text-[#E2E8F0] hover:border-white/[0.14]">
+                    class="flex w-full items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-left text-slate-500 transition-all hover:border-slate-300 hover:bg-slate-100 hover:text-slate-800 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-[#94A3B8] dark:hover:border-white/[0.14] dark:hover:bg-white/[0.09] dark:hover:text-[#E2E8F0]">
                 <span class="flex items-center gap-2 text-[12.5px] font-medium">
-                    <svg class="size-3.5 text-[#94A3B8]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg class="size-3.5 text-slate-400 dark:text-[#94A3B8]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z" />
                     </svg>
                     Quick search...
                 </span>
-                <kbd class="rounded border border-white/10 bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-[#E2E8F0]">Ctrl+K</kbd>
+                <kbd class="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-600 shadow-2xs dark:border-white/10 dark:bg-white/10 dark:text-[#E2E8F0]">Ctrl+K</kbd>
             </button>
         </div>
 
@@ -222,7 +223,7 @@
         <nav class="scroll-thin flex-1 space-y-4 overflow-y-auto px-2.5 py-3">
             @foreach ($navGroups as $group => $items)
                 <div>
-                    <p class="px-3 pb-1.5 pt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-[#64748B]">{{ $group }}</p>
+                    <p class="px-3 pb-1.5 pt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-[#64748B]">{{ $group }}</p>
                     <div class="space-y-0.5">
                         @foreach ($items as [$label, $route, $icon, $allowed, $badgeCount])
                             @php
@@ -244,9 +245,9 @@
                             <a href="{{ route($route) }}" wire:navigate
                                class="group flex items-center gap-2.5 rounded-lg px-3 py-[8.5px] text-[13.5px] font-medium transition-all duration-150 mb-0.5
                                       {{ $isActive
-                                          ? 'bg-[#38BDF8]/[0.14] text-[#38BDF8] font-semibold'
-                                          : 'text-[#94A3B8] hover:bg-white/[0.06] hover:text-white' }}">
-                                <svg class="size-[17px] shrink-0 {{ $isActive ? 'text-[#38BDF8]' : 'text-[#94A3B8] group-hover:text-white' }}"
+                                          ? 'bg-sky-50 text-sky-700 font-semibold shadow-2xs dark:bg-[#38BDF8]/[0.14] dark:text-[#38BDF8]'
+                                          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#94A3B8] dark:hover:bg-white/[0.06] dark:hover:text-white' }}">
+                                <svg class="size-[17px] shrink-0 {{ $isActive ? 'text-sky-600 dark:text-[#38BDF8]' : 'text-slate-400 group-hover:text-slate-700 dark:text-[#94A3B8] dark:group-hover:text-white' }}"
                                      fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}" />
                                 </svg>
@@ -265,19 +266,19 @@
         </nav>
 
         {{-- Footer Profile & Theme Toggle --}}
-        <div class="border-t border-white/[0.06] p-4">
+        <div class="border-t border-slate-200/80 p-4 dark:border-white/[0.06]">
             @if ($currentSchool)
                 <div class="mb-3" @if ($otherSchools->isNotEmpty()) x-data="{ schools: false }" @endif>
-                    <div class="flex items-center gap-2 rounded-md border border-white/[0.08] bg-white/[0.04] px-2.5 py-2">
-                        <span class="grid size-6 shrink-0 place-items-center rounded bg-white/10 font-mono text-[10px] font-bold text-white">
+                    <div class="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2 dark:border-white/[0.08] dark:bg-white/[0.04]">
+                        <span class="grid size-6 shrink-0 place-items-center rounded bg-slate-200 font-mono text-[10px] font-bold text-slate-700 dark:bg-white/10 dark:text-white">
                             {{ strtoupper(substr($currentSchool->short_name ?: $currentSchool->name, 0, 2)) }}
                         </span>
                         <span class="min-w-0 flex-1">
-                            <span class="block truncate text-[12px] font-semibold text-white">{{ $currentSchool->name }}</span>
+                            <span class="block truncate text-[12px] font-semibold text-slate-800 dark:text-white">{{ $currentSchool->name }}</span>
                         </span>
                         @if ($otherSchools->isNotEmpty())
                             <button type="button" @click="schools = !schools"
-                                    class="shrink-0 rounded p-1 text-[#94A3B8] transition hover:bg-white/10 hover:text-white"
+                                    class="shrink-0 rounded p-1 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-[#94A3B8] dark:hover:bg-white/10 dark:hover:text-white"
                                     aria-label="Switch school">
                                 <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M16 15l-4 4-4-4" />
@@ -291,9 +292,9 @@
                             @csrf
                             @foreach ($otherSchools as $membership)
                                 <button type="submit" name="tenant_id" value="{{ $membership->tenant_id }}"
-                                        class="block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[12px] text-[#94A3B8] transition hover:bg-white/[0.06] hover:text-white">
+                                        class="block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[12px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-[#94A3B8] dark:hover:bg-white/[0.06] dark:hover:text-white">
                                     {{ $membership->tenant->name }}
-                                    <span class="block truncate text-[10.5px] text-[#64748B]">{{ $membership->designation }}</span>
+                                    <span class="block truncate text-[10.5px] text-slate-400 dark:text-[#64748B]">{{ $membership->designation }}</span>
                                 </button>
                             @endforeach
                         </form>
@@ -303,11 +304,11 @@
 
             <div class="mb-3 flex items-center justify-between gap-2">
                 <div class="min-w-0">
-                    <p class="truncate text-[13px] font-semibold text-white">{{ $user?->full_name }}</p>
-                    <p class="truncate text-[11px] text-[#94A3B8]">{{ $user?->designation }}</p>
+                    <p class="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{{ $user?->full_name }}</p>
+                    <p class="truncate text-[11px] text-slate-500 dark:text-[#94A3B8]">{{ $user?->designation }}</p>
                 </div>
                 <button type="button" @click="theme = theme === 'dark' ? 'light' : 'dark'"
-                        class="grid size-8 shrink-0 place-items-center rounded-lg border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"
+                        class="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                         :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
                         title="Toggle theme">
                     <svg x-show="theme === 'dark'" class="size-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -320,7 +321,7 @@
             </div>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button class="flex w-full items-center justify-center gap-2 rounded-md border border-white/[0.12] bg-white/[0.06] px-3 py-1.5 text-[12.5px] font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20">
+                <button class="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 transition-all hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/10 dark:hover:border-white/20">
                     <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
                     </svg>
