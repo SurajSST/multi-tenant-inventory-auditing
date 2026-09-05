@@ -50,34 +50,53 @@
         @else
             <div class="table-scroll">
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
-                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-400">
                         <tr>
-                            <th scope="col" class="px-5 py-3">When</th>
-                            <th scope="col" class="px-5 py-3">Actor</th>
-                            <th scope="col" class="px-5 py-3">Action</th>
-                            <th scope="col" class="px-5 py-3">Detail</th>
+                            <th scope="col" class="px-5 py-3 font-medium">Timestamp</th>
+                            <th scope="col" class="px-4 py-3 font-medium">Actor</th>
+                            <th scope="col" class="px-4 py-3 font-medium">Action</th>
+                            <th scope="col" class="px-4 py-3 font-medium">Entity</th>
+                            <th scope="col" class="px-5 py-3 font-medium">Detail</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-white/5">
                         @foreach ($entries as $entry)
-                            <tr class="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
-                                <td class="whitespace-nowrap px-5 py-3.5 align-top text-xs text-slate-500 dark:text-slate-400">
-                                    <div class="font-medium text-slate-900 dark:text-slate-100">{{ $entry->at->format('d M Y') }}</div>
-                                    <div class="tabular-nums text-slate-400 dark:text-slate-500">{{ $entry->at->format('H:i:s') }}</div>
+                            @php
+                                $actionUpper = strtoupper($entry->action);
+                                $badgeClass = match (true) {
+                                    str_contains($actionUpper, 'REJECT') || str_contains($actionUpper, 'FLAG') => 'bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400',
+                                    str_contains($actionUpper, 'APPROV') || str_contains($actionUpper, 'CLEAR') => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400',
+                                    str_contains($actionUpper, 'ORDER') || str_contains($actionUpper, 'RECEIV') || str_contains($actionUpper, 'CREATE') => 'bg-sky-50 text-sky-700 ring-sky-600/20 dark:bg-sky-500/10 dark:text-sky-400',
+                                    default => 'bg-slate-100 text-slate-700 ring-slate-500/20 dark:bg-white/10 dark:text-slate-300',
+                                };
+                            @endphp
+                            <tr wire:key="entry-{{ $entry->id }}" class="hover:bg-slate-50/75 dark:hover:bg-white/[0.02]">
+                                <td class="whitespace-nowrap px-5 py-3 align-top text-xs tabular-nums">
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $entry->at->format('d M Y') }}</span>
+                                    <span class="block text-[11px] text-slate-400 dark:text-slate-500">{{ $entry->at->format('H:i:s') }}</span>
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-3.5 align-top">
-                                    <div class="font-medium text-slate-900 dark:text-slate-100">{{ $entry->actor?->full_name ?? 'System' }}</div>
-                                    @if ($entry->actor)
-                                        <div class="text-xs text-slate-500 dark:text-slate-400">
-                                            {{ $entry->actor->designation }}
-                                            @if ($entry->ip) · <span class="text-slate-400 dark:text-slate-500">{{ $entry->ip }}</span> @endif
-                                        </div>
+                                <td class="px-4 py-3 align-top">
+                                    <div class="text-xs font-medium text-slate-900 dark:text-slate-100">
+                                        {{ $entry->actor?->full_name ?? 'System' }}
+                                    </div>
+                                    @if ($entry->actor?->designation)
+                                        <div class="text-[11px] text-slate-500 dark:text-slate-400">{{ $entry->actor->designation }}</div>
+                                    @endif
+                                    @if ($entry->ip)
+                                        <div class="mt-0.5 text-[10px] font-mono text-slate-400 dark:text-slate-500">{{ $entry->ip }}</div>
                                     @endif
                                 </td>
-                                <td class="whitespace-nowrap px-5 py-3.5 align-top">
-                                    <x-badge>{{ Str::headline(Str::lower($entry->action)) }}</x-badge>
+                                <td class="whitespace-nowrap px-4 py-3 align-top">
+                                    <x-badge :class="$badgeClass">
+                                        {{ Str::headline(Str::lower($entry->action)) }}
+                                    </x-badge>
                                 </td>
-                                <td class="px-5 py-3.5 align-top text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                                <td class="whitespace-nowrap px-4 py-3 align-top">
+                                    <code class="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 dark:bg-white/10 dark:text-slate-400">
+                                        {{ Str::headline($entry->entity) }}
+                                    </code>
+                                </td>
+                                <td class="px-5 py-3 align-top text-xs leading-relaxed text-slate-700 dark:text-slate-300">
                                     {{ $entry->detail }}
                                 </td>
                             </tr>
