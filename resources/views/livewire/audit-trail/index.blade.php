@@ -48,24 +48,43 @@
         @if ($entries->isEmpty())
             <x-empty title="Nothing matches those filters" note="Try widening the date range or clearing the filters." />
         @else
-            <ul class="divide-y divide-slate-100 dark:divide-white/5">
-                @foreach ($entries as $entry)
-                    <li class="px-5 py-3.5">
-                        <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $entry->actor?->full_name ?? 'System' }}</span>
-                            <x-badge>{{ Str::headline(Str::lower($entry->action)) }}</x-badge>
-                            <time class="ml-auto shrink-0 text-xs text-slate-400 dark:text-slate-600">{{ $entry->at->format('d M Y, H:i:s') }}</time>
-                        </div>
-                        <p class="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{{ $entry->detail }}</p>
-                        @if ($entry->actor)
-                            <p class="mt-0.5 text-xs text-slate-400 dark:text-slate-600">
-                                {{ $entry->actor->designation }}
-                                @if ($entry->ip) · {{ $entry->ip }} @endif
-                            </p>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
+            <div class="table-scroll">
+                <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
+                    <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 dark:bg-white/5 dark:text-slate-400">
+                        <tr>
+                            <th scope="col" class="px-5 py-3">When</th>
+                            <th scope="col" class="px-5 py-3">Actor</th>
+                            <th scope="col" class="px-5 py-3">Action</th>
+                            <th scope="col" class="px-5 py-3">Detail</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                        @foreach ($entries as $entry)
+                            <tr class="hover:bg-slate-50/50 dark:hover:bg-white/[0.02]">
+                                <td class="whitespace-nowrap px-5 py-3.5 align-top text-xs text-slate-500 dark:text-slate-400">
+                                    <div class="font-medium text-slate-900 dark:text-slate-100">{{ $entry->at->format('d M Y') }}</div>
+                                    <div class="tabular-nums text-slate-400 dark:text-slate-500">{{ $entry->at->format('H:i:s') }}</div>
+                                </td>
+                                <td class="whitespace-nowrap px-5 py-3.5 align-top">
+                                    <div class="font-medium text-slate-900 dark:text-slate-100">{{ $entry->actor?->full_name ?? 'System' }}</div>
+                                    @if ($entry->actor)
+                                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                                            {{ $entry->actor->designation }}
+                                            @if ($entry->ip) · <span class="text-slate-400 dark:text-slate-500">{{ $entry->ip }}</span> @endif
+                                        </div>
+                                    @endif
+                                </td>
+                                <td class="whitespace-nowrap px-5 py-3.5 align-top">
+                                    <x-badge>{{ Str::headline(Str::lower($entry->action)) }}</x-badge>
+                                </td>
+                                <td class="px-5 py-3.5 align-top text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                                    {{ $entry->detail }}
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
 
             <div class="border-t border-slate-200 px-5 py-3 dark:border-white/10">
                 {{ $entries->links() }}
