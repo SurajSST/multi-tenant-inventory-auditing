@@ -99,6 +99,29 @@ class ScreensTest extends TestCase
             ->assertSee('Audit Trail');
     }
 
+    public function test_audit_trail_renders_cleanly_on_repeated_views_and_with_corrupted_cache(): void
+    {
+        $teacher = $this->staff('p.karki@prativa.edu.np');
+
+        // Prime the cache
+        $this->actingAs($teacher)
+            ->get('/audit-trail')
+            ->assertOk();
+
+        // Second request uses the cache
+        $this->actingAs($teacher)
+            ->get('/audit-trail')
+            ->assertOk();
+
+        // Simulate corrupted or non-array cached value (e.g. unserialized __PHP_Incomplete_Class or object)
+        cache()->put('audit_entities_user_'.$teacher->id, new \stdClass, 600);
+
+        $this->actingAs($teacher)
+            ->get('/audit-trail')
+            ->assertOk()
+            ->assertSee('My Activity Trail');
+    }
+
     public function test_the_auditor_can_open_the_count_sheet(): void
     {
         $this->actingAs($this->staff('auditor@prativa.edu.np'))->get('/count')->assertOk();

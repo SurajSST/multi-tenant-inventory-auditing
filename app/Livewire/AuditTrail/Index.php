@@ -69,24 +69,34 @@ class Index extends Component
             ->orderByDesc('id')
             ->paginate(50);
 
+        $tenantId = app(TenantContext::class)->id();
+        $cacheKey = $canViewAll
+            ? 'audit_entities_'.($tenantId ?? 'all')
+            : 'audit_entities_user_'.$user->id;
+
+        $entities = cache()->get($cacheKey);
+
+        if (! is_array($entities)) {
+            $entities = ($canViewAll ? AuditLog::distinct() : AuditLog::where('actor_id', $user->id)->distinct())
+                ->orderBy('entity')
+                ->pluck('entity')
+                ->all();
+
+            cache()->put($cacheKey, $entities, now()->addMinutes(10));
+        }
+
         return view('livewire.audit-trail.index', [
             'entries' => $entries,
             'canViewAll' => $canViewAll,
             // People posted to THIS school. Only higher tiers get the chooser.
             'actors' => $canViewAll
                 ? User::query()
-                    ->whereHas('memberships', fn ($q) => $q->where('tenant_id', app(TenantContext::class)->idOrFail()))
+                    ->when($tenantId, fn ($q) => $q->whereHas('memberships', fn ($m) => $m->where('tenant_id', $tenantId)))
                     ->with('currentMembership')
                     ->orderBy('full_name')
                     ->get(['id', 'full_name'])
                 : collect([$user]),
-            'entities' => cache()->remember(
-                $canViewAll ? 'audit_entities_'.app(TenantContext::class)->idOrFail() : 'audit_entities_user_'.$user->id,
-                now()->addMinutes(10),
-                fn () => ($canViewAll ? AuditLog::distinct() : AuditLog::where('actor_id', $user->id)->distinct())
-                    ->orderBy('entity')
-                    ->pluck('entity')
-            ),
+            'entities' => $entities,
         ])->title($canViewAll ? 'Audit Trail' : 'My Activity Trail');
     }
 }

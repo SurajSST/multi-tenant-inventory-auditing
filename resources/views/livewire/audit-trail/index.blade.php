@@ -29,7 +29,9 @@
                 <x-select id="entity" wire:model.live="entity">
                     <option value="">Everything</option>
                     @foreach ($entities as $name)
-                        <option value="{{ $name }}">{{ Str::headline($name) }}</option>
+                        @if (is_string($name))
+                            <option value="{{ $name }}">{{ Str::headline($name) }}</option>
+                        @endif
                     @endforeach
                 </x-select>
             </x-field>
