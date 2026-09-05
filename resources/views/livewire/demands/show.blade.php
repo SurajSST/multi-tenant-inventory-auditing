@@ -145,107 +145,185 @@
         </div>
 
         {{-- The trail --}}
-        <x-card title="Trail" subtitle="Every step, attributed and timestamped" :flush="true">
-            <ol class="divide-y divide-slate-100 dark:divide-white/5">
+        {{-- The trail --}}
+        <x-card title="Trail" subtitle="Every step, attributed and timestamped">
+            <div class="flow-root">
+                <ol class="relative">
 
-                <li class="px-4 py-2.5 sm:px-5 sm:py-3">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Raised</span>
-                        <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $demand->created_at->format('d M Y, H:i') }}</time>
-                    </div>
-                    <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy->full_name }}</span>
-                        <span class="text-slate-500 dark:text-slate-400">· {{ $demand->raisedBy->designation }}</span>
-                    </div>
-                </li>
+                    {{-- Raised --}}
+                    <li class="relative pb-5 pl-9 group last:pb-0">
+                        <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                        <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full bg-slate-100 text-slate-600 ring-4 ring-white dark:bg-white/10 dark:text-slate-300 dark:ring-slate-900">
+                            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Raised</span>
+                                <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $demand->created_at->format('d M Y, H:i') }}</time>
+                            </div>
+                            <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                                <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy->full_name }}</span>
+                                <span class="text-slate-500 dark:text-slate-400">· {{ $demand->raisedBy->designation }}</span>
+                            </div>
+                        </div>
+                    </li>
 
-                @foreach ($demand->approvals as $approval)
-                    <li class="px-4 py-2.5 sm:px-5 sm:py-3">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider {{ $approval->action === \App\Enums\ApprovalAction::REJECT ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' }}">
-                                Tier {{ $approval->tier_no }} — {{ $approval->action->label() }}
-                            </span>
-                            <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $approval->acted_at->format('d M Y, H:i') }}</time>
-                        </div>
-                        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $approval->actor->full_name }}</span>
-                            <span class="text-slate-500 dark:text-slate-400">· {{ $approval->actor->designation }}</span>
-                        </div>
-                        @if ($approval->minute_ref || $approval->reason)
-                            <div class="mt-1 rounded bg-slate-50 px-2 py-1 text-xs text-slate-600 dark:bg-white/5 dark:text-slate-300">
-                                @if ($approval->minute_ref)
-                                    <span class="font-medium text-slate-700 dark:text-slate-200">Min {{ $approval->minute_ref }}</span>@if ($approval->reason) — @endif
-                                @endif
-                                @if ($approval->reason)
-                                    “{{ $approval->reason }}”
+                    {{-- Approvals --}}
+                    @foreach ($demand->approvals as $approval)
+                        <li class="relative pb-5 pl-9 group last:pb-0">
+                            <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                            <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full {{ $approval->action === \App\Enums\ApprovalAction::REJECT ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' }} ring-4 ring-white dark:ring-slate-900">
+                                @if ($approval->action === \App\Enums\ApprovalAction::REJECT)
+                                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                                    </svg>
+                                @else
+                                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                                    </svg>
                                 @endif
                             </div>
-                        @endif
-                    </li>
-                @endforeach
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider {{ $approval->action === \App\Enums\ApprovalAction::REJECT ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400' }}">
+                                        Tier {{ $approval->tier_no }} — {{ $approval->action->label() }}
+                                    </span>
+                                    <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $approval->acted_at->format('d M Y, H:i') }}</time>
+                                </div>
+                                <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $approval->actor->full_name }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· {{ $approval->actor->designation }}</span>
+                                </div>
+                                @if ($approval->minute_ref || $approval->reason)
+                                    <div class="mt-1.5 rounded-md border border-slate-200/60 bg-slate-50/80 px-2.5 py-1 text-xs text-slate-600 dark:border-white/5 dark:bg-white/5 dark:text-slate-300">
+                                        @if ($approval->minute_ref)
+                                            <span class="font-medium text-slate-800 dark:text-slate-200">Minute {{ $approval->minute_ref }}</span>@if ($approval->reason) — @endif
+                                        @endif
+                                        @if ($approval->reason)
+                                            “{{ $approval->reason }}”
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
+                        </li>
+                    @endforeach
 
-                @if ($demand->isPending())
-                    <li class="bg-amber-50/60 px-4 py-2.5 sm:px-5 sm:py-3 dark:bg-amber-500/5">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Waiting</span>
-                            <span class="text-[11px] font-medium text-amber-600/80 dark:text-amber-400/80">Pending signature</span>
-                        </div>
-                        <p class="mt-0.5 text-sm font-medium text-slate-900 dark:text-slate-100">
-                            Tier {{ $demand->current_tier }} — {{ $tiers->firstWhere('tier_no', $demand->current_tier)?->decider_label }}
-                        </p>
-                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Nothing moves until this signature.</p>
-                    </li>
-                @endif
+                    {{-- Pending Waiting --}}
+                    @if ($demand->isPending())
+                        <li class="relative pb-5 pl-9 group last:pb-0">
+                            <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                            <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-4 ring-white dark:bg-amber-500/20 dark:text-amber-400 dark:ring-slate-900">
+                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                                <span class="absolute -top-0.5 -right-0.5 flex size-2">
+                                    <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75"></span>
+                                    <span class="relative inline-flex size-2 rounded-full bg-amber-500"></span>
+                                </span>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Waiting</span>
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">Pending</span>
+                                </div>
+                                <p class="mt-0.5 text-sm font-medium text-slate-900 dark:text-slate-100">
+                                    Tier {{ $demand->current_tier }} — {{ $tiers->firstWhere('tier_no', $demand->current_tier)?->decider_label }}
+                                </p>
+                                <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Nothing moves until this signature.</p>
+                            </div>
+                        </li>
+                    @endif
 
-                @if ($order)
-                    <li class="px-4 py-2.5 sm:px-5 sm:py-3">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Order placed — {{ $order->ref }}</span>
-                            <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $order->ordered_at->format('d M Y, H:i') }}</time>
-                        </div>
-                        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $order->orderedBy->full_name }}</span>
-                            <span class="text-slate-500 dark:text-slate-400">· {{ $order->vendor->name }} · <x-money :amount="$order->order_amount" /></span>
-                        </div>
-                    </li>
-                @endif
+                    {{-- Order Placed --}}
+                    @if ($order)
+                        <li class="relative pb-5 pl-9 group last:pb-0">
+                            <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                            <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full bg-blue-50 text-blue-600 ring-4 ring-white dark:bg-blue-500/20 dark:text-blue-400 dark:ring-slate-900">
+                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Order placed — {{ $order->ref }}</span>
+                                    <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $order->ordered_at->format('d M Y, H:i') }}</time>
+                                </div>
+                                <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $order->orderedBy->full_name }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· {{ $order->vendor->name }} · <x-money :amount="$order->order_amount" /></span>
+                                </div>
+                            </div>
+                        </li>
+                    @endif
 
-                @if ($receipt)
-                    <li class="px-4 py-2.5 sm:px-5 sm:py-3">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Goods verified</span>
-                            <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $receipt->received_at->format('d M Y, H:i') }}</time>
-                        </div>
-                        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $receipt->receivedBy->full_name }}</span>
-                            <span class="text-slate-500 dark:text-slate-400">· Into {{ $receipt->location->name }} · {{ $receipt->condition->label() }}@if ($receipt->challan_no) · challan {{ $receipt->challan_no }}@endif</span>
-                        </div>
-                        @if ($receipt->discrepancy_note)
-                            <p class="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">“{{ $receipt->discrepancy_note }}”</p>
-                        @endif
-                    </li>
-                @elseif ($order)
-                    <li class="bg-amber-50/60 px-4 py-2.5 sm:px-5 sm:py-3 dark:bg-amber-500/5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Awaiting receipt</span>
-                        <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                            Somebody other than {{ $order->orderedBy->full_name }} has to verify these goods arrived.
-                        </p>
-                    </li>
-                @endif
+                    {{-- Goods Verified --}}
+                    @if ($receipt)
+                        <li class="relative pb-5 pl-9 group last:pb-0">
+                            <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                            <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full bg-teal-50 text-teal-600 ring-4 ring-white dark:bg-teal-500/20 dark:text-teal-400 dark:ring-slate-900">
+                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V3.75c0-.621-.504-1.125-1.125-1.125h-9.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125Z" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">Goods verified</span>
+                                    <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $receipt->received_at->format('d M Y, H:i') }}</time>
+                                </div>
+                                <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $receipt->receivedBy->full_name }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· Into {{ $receipt->location->name }} · {{ $receipt->condition->label() }}@if ($receipt->challan_no) · ch. {{ $receipt->challan_no }}@endif</span>
+                                </div>
+                                @if ($receipt->discrepancy_note)
+                                    <p class="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">“{{ $receipt->discrepancy_note }}”</p>
+                                @endif
+                            </div>
+                        </li>
+                    @elseif ($order)
+                        <li class="relative pb-5 pl-9 group last:pb-0">
+                            <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                            <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full bg-amber-50 text-amber-600 ring-4 ring-white dark:bg-amber-500/20 dark:text-amber-400 dark:ring-slate-900">
+                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Awaiting receipt</span>
+                                    <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">Pending</span>
+                                </div>
+                                <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
+                                    Somebody other than {{ $order->orderedBy->full_name }} has to verify goods arrived.
+                                </p>
+                            </div>
+                        </li>
+                    @endif
 
-                @if ($bill)
-                    <li class="px-4 py-2.5 sm:px-5 sm:py-3">
-                        <div class="flex items-center justify-between gap-2">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Bill entered — {{ $bill->bill_no }}</span>
-                            <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $bill->entered_at->format('d M Y, H:i') }}</time>
-                        </div>
-                        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $bill->enteredBy->full_name }}</span>
-                            <span class="text-slate-500 dark:text-slate-400">· <x-money :amount="$bill->bill_amount" /> · <x-badge :class="$bill->match_status->badge()">{{ $bill->match_status->label() }}</x-badge></span>
-                        </div>
-                    </li>
-                @endif
-            </ol>
+                    {{-- Bill --}}
+                    @if ($bill)
+                        <li class="relative pb-5 pl-9 group last:pb-0">
+                            <span class="absolute left-3.5 top-7 -bottom-1 w-0.5 bg-slate-200 dark:bg-white/10 group-last:hidden" aria-hidden="true"></span>
+                            <div class="absolute left-0 top-0.5 flex size-7 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 ring-4 ring-white dark:bg-indigo-500/20 dark:text-indigo-400 dark:ring-slate-900">
+                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v10.5m0-10.5a60.07 60.07 0 0 1 15.797-2.101c.727-.198 1.453.342 1.453 1.096V4.5M3.75 4.5h16.5m-16.5 0v10.5m16.5-10.5v10.5m0-10.5a60.07 60.07 0 0 0-15.797 2.101c-.727.198-1.453-.342-1.453-1.096V15m17.25 0a60.07 60.07 0 0 1-15.797 2.101c-.727.198-1.453-.342-1.453-1.096V15m0 0v2.25" />
+                                </svg>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Bill {{ $bill->bill_no }}</span>
+                                    <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $bill->entered_at->format('d M Y, H:i') }}</time>
+                                </div>
+                                <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $bill->enteredBy->full_name }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· <x-money :amount="$bill->bill_amount" /> · <x-badge :class="$bill->match_status->badge()">{{ $bill->match_status->label() }}</x-badge></span>
+                                </div>
+                            </div>
+                        </li>
+                    @endif
+                </ol>
+            </div>
         </x-card>
     </div>
 
