@@ -1,14 +1,27 @@
 <div>
+    <x-print-header
+        title="Physical Stock Count Sheet"
+        nepaliTitle="मौज्दात भौतिक गणना फाराम"
+        :department="$this->blocks->firstWhere('id', $locationId)?->name ?? 'Assigned Block'"
+        :date="now()->format('d M Y')"
+    />
+
     <x-page-header title="Physical Count"
-                   subtitle="Walk the block, type what is actually there, then save the whole sheet. A figure that has not moved writes nothing — only real changes reach the ledger, and the previous figure is always kept." />
+                   subtitle="Walk the block, type what is actually there, then save the whole sheet. A figure that has not moved writes nothing — only real changes reach the ledger, and the previous figure is always kept.">
+        <x-slot:actions>
+            <x-button variant="secondary" onclick="window.print()">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" />
+                </svg>
+                Print Sheet
+            </x-button>
+        </x-slot:actions>
+    </x-page-header>
 
     <x-errors />
 
     @if ($this->blocks->isEmpty())
         <x-card>
-            {{-- Two different reasons produce an empty list, and telling somebody
-                 to go and get themselves assigned to a block that does not exist
-                 sends them to the wrong screen. --}}
             @if ($this->schoolHasNoBlocks)
                 <x-empty title="No blocks have been set up yet"
                          note="A count needs somewhere to count. Add the school's blocks under Setup → Blocks, then come back." />
@@ -19,7 +32,7 @@
         </x-card>
     @else
         <form wire:submit="save">
-            <x-card class="mb-5">
+            <x-card class="mb-5 no-print">
                 <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <x-field label="Block" for="locationId" required
                              hint="Only the blocks you are assigned to.">
@@ -92,7 +105,7 @@
                         </table>
                     </div>
 
-                    <div class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3 dark:border-white/10 dark:bg-white/5">
+                    <div class="no-print flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-3 dark:border-white/10 dark:bg-white/5">
                         <p class="text-xs text-slate-500 dark:text-slate-500">
                             Highlighted rows differ from the standing figure. Only those will be written.
                         </p>
@@ -104,5 +117,30 @@
                 @endif
             </x-card>
         </form>
+
+        @php
+            $countSignatures = [
+                [
+                    'role' => 'Physical Auditor (गणनाकर्ता)',
+                    'name' => auth()->user()?->full_name,
+                    'designation' => auth()->user()?->designation ?? 'Stock Auditor',
+                    'date' => now()->format('d M Y'),
+                ],
+                [
+                    'role' => 'Block Custodian / Witness (फाँट प्रमुख)',
+                    'name' => 'Block Custodian / Witness',
+                    'designation' => $this->blocks->firstWhere('id', $locationId)?->name ?? 'Custodian',
+                    'date' => '_______________',
+                ],
+                [
+                    'role' => 'Verified By (प्रमाणितकर्ता)',
+                    'name' => 'Internal Auditor / Principal',
+                    'designation' => 'Prativa Secondary School',
+                    'date' => now()->format('d M Y'),
+                ],
+            ];
+        @endphp
+
+        <x-print-signatures :signatures="$countSignatures" />
     @endif
 </div>

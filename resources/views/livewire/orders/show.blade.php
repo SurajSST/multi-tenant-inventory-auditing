@@ -1,6 +1,15 @@
 @php $receipt = $order->receipt; $bill = $order->bills->first(); @endphp
 
 <div>
+    <x-print-header
+        title="Purchase Order"
+        nepaliTitle="खरीद आदेश"
+        :ref="$order->ref"
+        :date="$order->ordered_at->format('d M Y')"
+        :vendor="$order->vendor->name"
+        :status="$order->status->label()"
+    />
+
     <x-page-header :title="$order->ref"
                    :subtitle="$order->vendor->name . ' · against ' . $order->demand->ref">
         <x-slot:actions>
@@ -9,6 +18,18 @@
                     <x-button href="{{ route('orders.receive', $order) }}" wire:navigate>Verify receipt</x-button>
                 @endif
             @endcan
+            <x-button variant="secondary" href="{{ route('orders.print', ['order' => $order, 'autoprint' => 1]) }}" target="_blank">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" />
+                </svg>
+                Print PO
+            </x-button>
+            <x-button variant="secondary" href="{{ route('orders.pdf', $order) }}">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Download PDF
+            </x-button>
             <x-button variant="secondary" href="{{ route('demands.show', $order->demand) }}" wire:navigate>Demand form</x-button>
         </x-slot:actions>
     </x-page-header>
@@ -91,48 +112,84 @@
 
         <x-card title="Who did what" :flush="true">
             <ol class="divide-y divide-slate-100 dark:divide-white/5">
-                <li class="px-5 py-4">
-                    <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-600">Order placed</p>
-                    <p class="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{{ $order->orderedBy->full_name }}</p>
-                    <p class="text-xs text-slate-500 dark:text-slate-500">{{ $order->orderedBy->designation }}</p>
-                    <p class="mt-1 text-xs text-slate-400 dark:text-slate-600">{{ $order->ordered_at->format('d M Y, H:i') }}</p>
+                <li class="px-4 py-2.5 sm:px-5 sm:py-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Order placed</span>
+                        <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $order->ordered_at->format('d M Y, H:i') }}</time>
+                    </div>
+                    <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                        <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $order->orderedBy->full_name }}</span>
+                        <span class="text-slate-500 dark:text-slate-400">· {{ $order->orderedBy->designation }}</span>
+                    </div>
                     @if ($order->expected_date)
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-500">Expected {{ $order->expected_date->format('d M Y') }}</p>
+                        <p class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Expected {{ $order->expected_date->format('d M Y') }}</p>
                     @endif
                 </li>
 
                 @if ($receipt)
-                    <li class="px-5 py-4">
-                        <p class="text-xs font-medium uppercase tracking-wide text-emerald-600">Goods verified</p>
-                        <p class="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{{ $receipt->receivedBy->full_name }}</p>
-                        <p class="text-xs text-slate-500 dark:text-slate-500">{{ $receipt->receivedBy->designation }}</p>
-                        <p class="mt-1 text-xs text-slate-500 dark:text-slate-500">
-                            Into {{ $receipt->location->name }} · {{ $receipt->condition->label() }}
-                            @if ($receipt->challan_no) · challan {{ $receipt->challan_no }} @endif
-                        </p>
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-600">{{ $receipt->received_at->format('d M Y, H:i') }}</p>
+                    <li class="px-4 py-2.5 sm:px-5 sm:py-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Goods verified</span>
+                            <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $receipt->received_at->format('d M Y, H:i') }}</time>
+                        </div>
+                        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $receipt->receivedBy->full_name }}</span>
+                            <span class="text-slate-500 dark:text-slate-400">· Into {{ $receipt->location->name }} · {{ $receipt->condition->label() }}@if ($receipt->challan_no) · challan {{ $receipt->challan_no }}@endif</span>
+                        </div>
                     </li>
                 @else
-                    <li class="bg-amber-50/60 px-5 py-4">
-                        <p class="text-xs font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">Awaiting verification</p>
-                        <p class="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    <li class="bg-amber-50/60 px-4 py-2.5 sm:px-5 sm:py-3 dark:bg-amber-500/5">
+                        <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Awaiting verification</span>
+                        <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
                             Anybody with the Receiving Officer role except {{ $order->orderedBy->full_name }}.
                         </p>
                     </li>
                 @endif
 
                 @if ($bill)
-                    <li class="px-5 py-4">
-                        <p class="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-600">Bill {{ $bill->bill_no }}</p>
-                        <p class="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{{ $bill->enteredBy->full_name }}</p>
-                        <p class="text-xs text-slate-500 dark:text-slate-500">
-                            <x-money :amount="$bill->bill_amount" /> ·
-                            <x-badge :class="$bill->match_status->badge()">{{ $bill->match_status->label() }}</x-badge>
-                        </p>
-                        <p class="mt-1 text-xs text-slate-400 dark:text-slate-600">{{ $bill->entered_at->format('d M Y, H:i') }}</p>
+                    <li class="px-4 py-2.5 sm:px-5 sm:py-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Bill {{ $bill->bill_no }}</span>
+                            <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $bill->entered_at->format('d M Y, H:i') }}</time>
+                        </div>
+                        <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
+                            <span class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $bill->enteredBy->full_name }}</span>
+                            <span class="text-slate-500 dark:text-slate-400">· <x-money :amount="$bill->bill_amount" /> · <x-badge :class="$bill->match_status->badge()">{{ $bill->match_status->label() }}</x-badge></span>
+                        </div>
                     </li>
                 @endif
             </ol>
         </x-card>
     </div>
+
+    @php
+        $orderSignatures = [
+            [
+                'role' => 'Purchase Officer (आदेशकर्ता)',
+                'name' => $order->orderedBy->full_name,
+                'designation' => $order->orderedBy->designation,
+                'date' => $order->ordered_at->format('d M Y'),
+            ],
+            [
+                'role' => 'Vendor Acknowledgment (विक्रेता)',
+                'name' => $order->vendor->name,
+                'designation' => 'Authorized Signature & Seal',
+                'date' => '_______________',
+            ],
+            [
+                'role' => 'Goods Received By (बुझिलिने)',
+                'name' => $receipt ? $receipt->receivedBy->full_name : 'Pending Verification',
+                'designation' => $receipt ? $receipt->receivedBy->designation : 'Receiving Officer',
+                'date' => $receipt ? $receipt->received_at->format('d M Y') : '_______________',
+            ],
+            [
+                'role' => 'Approved By (स्वीकृतकर्ता)',
+                'name' => 'Principal / Executive Head',
+                'designation' => 'Prativa Secondary School',
+                'date' => $order->ordered_at->format('d M Y'),
+            ],
+        ];
+    @endphp
+
+    <x-print-signatures :signatures="$orderSignatures" />
 </div>

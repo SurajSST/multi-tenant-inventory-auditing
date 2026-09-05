@@ -1,12 +1,24 @@
 <div>
+    <x-print-header
+        title="Stock Variance Audit Report"
+        nepaliTitle="मौज्दात फरक लेखापरीक्षण प्रतिवेदन"
+        :date="now()->format('d M Y')"
+    />
+
     <x-page-header title="Stock Variance"
                    subtitle="What the school bought through this system against what is physically on the shelf. A large gap is the first thing worth asking about.">
         <x-slot:actions>
+            <x-button variant="secondary" onclick="window.print()">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" />
+                </svg>
+                Print Report
+            </x-button>
             <x-button variant="secondary" href="{{ route('inventory.register') }}" wire:navigate>Register</x-button>
         </x-slot:actions>
     </x-page-header>
 
-    <x-card class="mb-5">
+    <x-card class="mb-5 no-print">
         <div class="grid gap-4 sm:grid-cols-2">
             <x-field label="Block" for="locationId">
                 <x-select id="locationId" wire:model.live="locationId">
@@ -76,4 +88,29 @@
             </p>
         @endif
     </x-card>
+
+    @php
+        $varianceSignatures = [
+            [
+                'role' => 'Audited By (लेखापरीक्षक)',
+                'name' => auth()->user()?->full_name,
+                'designation' => auth()->user()?->designation ?? 'Stock Auditor',
+                'date' => now()->format('d M Y'),
+            ],
+            [
+                'role' => 'Store In-charge (भण्डार प्रमुख)',
+                'name' => 'Store Keeper / Custodian',
+                'designation' => 'Inventory Management',
+                'date' => '_______________',
+            ],
+            [
+                'role' => 'Verified / Approved By (स्वीकृतकर्ता)',
+                'name' => 'Principal / School Head',
+                'designation' => 'Prativa Secondary School',
+                'date' => now()->format('d M Y'),
+            ],
+        ];
+    @endphp
+
+    <x-print-signatures :signatures="$varianceSignatures" />
 </div>

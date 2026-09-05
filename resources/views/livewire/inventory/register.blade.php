@@ -1,13 +1,25 @@
 <div>
+    <x-print-header
+        title="Central Stock Register"
+        nepaliTitle="जिन्सी खाता / मौज्दात विवरण"
+        :date="now()->format('d M Y')"
+    />
+
     <x-page-header title="Stock Register"
                    subtitle="One row per item type, one column per block. Every figure is the newest entry in the ledger — never a stored total, so it cannot drift out of step with the history.">
         <x-slot:actions>
+            <x-button variant="secondary" onclick="window.print()">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" />
+                </svg>
+                Print
+            </x-button>
             <x-button variant="secondary" href="{{ route('inventory.variance') }}" wire:navigate>Variance</x-button>
             <x-button variant="secondary" href="{{ route('export.stock-register') }}">Export to Excel</x-button>
         </x-slot:actions>
     </x-page-header>
 
-    <x-card class="mb-5">
+    <x-card class="mb-5 no-print">
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <x-field label="Search" for="search">
                 <x-input id="search" wire:model.live.debounce.300ms="search" placeholder="Name or code, e.g. CHAIR.S" />
@@ -92,4 +104,29 @@
             </div>
         @endif
     </x-card>
+
+    @php
+        $registerSignatures = [
+            [
+                'role' => 'Inventory Keeper (जिन्सी शाखा)',
+                'name' => auth()->user()?->full_name,
+                'designation' => auth()->user()?->designation ?? 'Store Section',
+                'date' => now()->format('d M Y'),
+            ],
+            [
+                'role' => 'Audited By (लेखापरीक्षक)',
+                'name' => 'Internal Auditor / Inspector',
+                'designation' => 'Stock Audit Committee',
+                'date' => '_______________',
+            ],
+            [
+                'role' => 'Approved By (प्रमाणितकर्ता)',
+                'name' => 'Principal / School Head',
+                'designation' => 'Prativa Secondary School',
+                'date' => now()->format('d M Y'),
+            ],
+        ];
+    @endphp
+
+    <x-print-signatures :signatures="$registerSignatures" />
 </div>

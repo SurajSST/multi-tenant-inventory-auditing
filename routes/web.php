@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\TenantController;
 use App\Livewire;
@@ -46,6 +47,8 @@ Route::middleware('auth')->group(function () {
         ->middleware('role:INITIATOR,SUPER_ADMIN')->name('demands.create');
     Route::get('demands/queue', Livewire\Demands\Queue::class)->name('demands.queue');
     Route::get('demands/{demand}', Livewire\Demands\Show::class)->name('demands.show');
+    Route::get('demands/{demand}/print', [DocumentController::class, 'demand'])->name('demands.print');
+    Route::get('demands/{demand}/pdf', [DocumentController::class, 'demand'])->name('demands.pdf');
 
     // Orders and receipts
     Route::get('orders', Livewire\Orders\Index::class)->name('orders.index');
@@ -54,15 +57,21 @@ Route::middleware('auth')->group(function () {
     Route::get('orders/{order}/receive', Livewire\Orders\Receive::class)
         ->middleware('role:RECEIVING_OFFICER,SUPER_ADMIN')->name('orders.receive');
     Route::get('orders/{order}', Livewire\Orders\Show::class)->name('orders.show');
+    Route::get('orders/{order}/print', [DocumentController::class, 'order'])->name('orders.print');
+    Route::get('orders/{order}/pdf', [DocumentController::class, 'order'])->name('orders.pdf');
 
     // Bills
     Route::middleware('role:ACCOUNTS,SUPER_ADMIN')->group(function () {
         Route::get('bills', Livewire\Bills\Index::class)->name('bills.index');
         Route::get('bills/new', Livewire\Bills\Create::class)->name('bills.create');
+        Route::get('bills/print', [DocumentController::class, 'bills'])->name('bills.print');
+        Route::get('bills/pdf', [DocumentController::class, 'bills'])->name('bills.pdf');
 
         Route::get('petty-cash', Livewire\PettyCash\Index::class)->name('petty-cash.index');
         Route::get('petty-cash/new', Livewire\PettyCash\Issue::class)->name('petty-cash.issue');
         Route::get('petty-cash/{token}', Livewire\PettyCash\Show::class)->name('petty-cash.show');
+        Route::get('petty-cash/{token}/print', [DocumentController::class, 'pettyCash'])->name('petty-cash.print');
+        Route::get('petty-cash/{token}/pdf', [DocumentController::class, 'pettyCash'])->name('petty-cash.pdf');
     });
 
     // Setup

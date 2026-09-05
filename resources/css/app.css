@@ -59,9 +59,114 @@ html[data-theme='dark'] body {
     -webkit-overflow-scrolling: touch;
 }
 
+.print-only {
+    display: none !important;
+}
+
 @media print {
-    .no-print { display: none !important; }
-    body { background: #fff; }
+    .no-print {
+        display: none !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 10mm 12mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-size: 10.5pt;
+        line-height: 1.35;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    .lg\:flex {
+        display: block !important;
+    }
+
+    .lg\:grid-cols-3 {
+        display: block !important;
+    }
+
+    .lg\:col-span-2 {
+        width: 100% !important;
+    }
+
+    section {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 4px !important;
+        margin-bottom: 14px !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* Override dark mode on print */
+    html[data-theme='dark'] body,
+    html[data-theme='dark'] div,
+    html[data-theme='dark'] section,
+    html[data-theme='dark'] table,
+    html[data-theme='dark'] tr,
+    html[data-theme='dark'] th,
+    html[data-theme='dark'] td,
+    html[data-theme='dark'] p,
+    html[data-theme='dark'] span {
+        background-color: transparent !important;
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    /* Print tables */
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    th, td {
+        border: 1px solid #e2e8f0 !important;
+        padding: 6px 8px !important;
+    }
+
+    th {
+        background-color: #f8fafc !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+
+    .break-inside-avoid,
+    .page-break-inside-avoid {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+    }
+
+    a {
+        text-decoration: none !important;
+        color: inherit !important;
+    }
 }
 
 [x-cloak] {
@@ -186,4 +291,35 @@ html[data-theme='dark'] .skeleton {
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Print Overrides: clean output without web chrome */
+@media print {
+    .no-print,
+    header,
+    aside,
+    nav,
+    .pwa-tabbar,
+    button:not(.print-include) {
+        display: none !important;
+    }
+
+    body, html {
+        background: #fff !important;
+        color: #0f172a !important;
+    }
+
+    main {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    .shadow-sm, .shadow, .shadow-md, .shadow-lg, .shadow-2xl {
+        box-shadow: none !important;
+    }
+
+    .ring-1, .ring-2 {
+        box-shadow: none !important;
+    }
 }

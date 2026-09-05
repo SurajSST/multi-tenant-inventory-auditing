@@ -1,14 +1,32 @@
 <div>
+    <x-print-header
+        title="Procurement Bills & 3-Way Match Register"
+        nepaliTitle="बिल तथा ३-पक्षीय मिलान विवरण"
+        :status="$status ? \App\Enums\MatchStatus::tryFrom($status)?->label() : 'All Bills'"
+    />
+
     <x-page-header title="Bills"
                    subtitle="Approved ↔ ordered ↔ billed, compared live. A bill matches only when it equals the order and does not exceed the approval.">
         <x-slot:actions>
+            <x-button variant="secondary" href="{{ route('bills.print', ['status' => $status, 'autoprint' => 1]) }}" target="_blank">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.656h10.5Z" />
+                </svg>
+                Print
+            </x-button>
+            <x-button variant="secondary" href="{{ route('bills.pdf', ['status' => $status]) }}">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Download PDF
+            </x-button>
             <x-button variant="secondary" href="{{ route('export.procurement') }}">Export</x-button>
             <x-button href="{{ route('bills.create') }}" wire:navigate>Enter a bill</x-button>
         </x-slot:actions>
     </x-page-header>
 
     @if ($awaitingBill->isNotEmpty())
-        <x-card class="mb-6 ring-sky-300 dark:ring-sky-500/40"
+        <x-card class="mb-6 ring-sky-300 dark:ring-sky-500/40 no-print"
                 title="{{ $awaitingBill->count() }} verified deliver{{ $awaitingBill->count() === 1 ? 'y' : 'ies' }} with no bill yet"
                 subtitle="Goods confirmed received. The vendor's bill can now be entered against them." :flush="true">
             <ul class="divide-y divide-slate-100 dark:divide-white/5">
@@ -33,7 +51,7 @@
         </x-card>
     @endif
 
-    <x-card class="mb-5">
+    <x-card class="mb-5 no-print">
         <x-field label="Match status" for="status" class="max-w-xs">
             <x-select id="status" wire:model.live="status">
                 <option value="">Every bill</option>
@@ -104,7 +122,7 @@
                                     <x-badge :class="$bill->match_status->badge()">{{ $bill->match_status->label() }}</x-badge>
                                     @if ($bill->isFlagged())
                                         <button type="button" wire:click="openClear('{{ $bill->id }}')"
-                                                class="mt-1 block text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">
+                                                class="no-print mt-1 block text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">
                                             Clear it
                                         </button>
                                     @elseif ($bill->variance_note)
@@ -118,7 +136,7 @@
                                     <span class="block text-slate-400 dark:text-slate-600">{{ $bill->entered_at->format('d M Y') }}</span>
                                     @if ($bill->attachment_path)
                                         <a href="{{ URL::signedRoute('attachments.show', ['path' => $bill->attachment_path]) }}"
-                                           target="_blank" class="font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">Scan</a>
+                                           target="_blank" class="no-print font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">Scan</a>
                                     @endif
                                 </td>
                             </tr>
@@ -129,9 +147,34 @@
         @endif
 
         @if ($bills->hasPages())
-            <div class="border-t border-slate-100 px-5 py-3 dark:border-white/5">{{ $bills->links() }}</div>
+            <div class="border-t border-slate-100 px-5 py-3 dark:border-white/5 no-print">{{ $bills->links() }}</div>
         @endif
     </x-card>
+
+    @php
+        $billsSignatures = [
+            [
+                'role' => 'Prepared By (लेखा शाखा)',
+                'name' => auth()->user()?->full_name,
+                'designation' => auth()->user()?->designation ?? 'Accounts Section',
+                'date' => now()->format('d M Y'),
+            ],
+            [
+                'role' => 'Audited / Verified By (आन्तरिक लेखापरीक्षक)',
+                'name' => 'Internal Auditor / Accounts Officer',
+                'designation' => 'Finance & Accounts',
+                'date' => '_______________',
+            ],
+            [
+                'role' => 'Approved By (स्वीकृतकर्ता)',
+                'name' => 'Principal / School Head',
+                'designation' => 'Prativa Secondary School',
+                'date' => now()->format('d M Y'),
+            ],
+        ];
+    @endphp
+
+    <x-print-signatures :signatures="$billsSignatures" />
 
     {{-- Clearing a variance --}}
     @if ($clearing)

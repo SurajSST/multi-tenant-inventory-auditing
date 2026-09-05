@@ -3,8 +3,10 @@
 namespace App\Livewire\Demands;
 
 use App\Enums\DemandStatus;
+use App\Models\DemandForm;
 use App\Services\DemandService;
 use Illuminate\View\View;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -22,11 +24,11 @@ class Index extends Component
     #[Url(except: false)]
     public bool $mine = false;
 
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function departments(): array
     {
         try {
-            return \App\Models\DemandForm::distinct()
+            return DemandForm::distinct()
                 ->pluck('department')
                 ->filter()
                 ->sort()

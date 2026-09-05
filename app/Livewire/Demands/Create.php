@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Demands;
 
+use App\Models\DemandForm;
 use App\Models\ItemType;
 use App\Services\DemandService;
 use App\Support\Money;
@@ -53,7 +54,7 @@ class Create extends Component
         ];
 
         try {
-            $existing = \App\Models\DemandForm::distinct()->pluck('department')->filter()->values()->all();
+            $existing = DemandForm::distinct()->pluck('department')->filter()->values()->all();
         } catch (\Throwable) {
             $existing = [];
         }

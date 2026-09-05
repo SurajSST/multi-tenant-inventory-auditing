@@ -227,7 +227,7 @@
         </div>
 
         {{-- Navigation Groups --}}
-        <nav class="scroll-thin flex-1 space-y-4 overflow-y-auto px-2.5 py-3">
+        <nav id="sidebar-nav" class="scroll-thin flex-1 space-y-4 overflow-y-auto px-2.5 py-3">
             @foreach ($navGroups as $group => $items)
                 <div>
                     <p class="px-3 pb-1.5 pt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-[#64748B]">{{ $group }}</p>
@@ -246,10 +246,11 @@
                                     'petty-cash.index' => request()->routeIs('petty-cash.*'),
                                     'setup.index' => request()->routeIs('setup.*'),
                                     'audit.index' => request()->routeIs('audit.*'),
-                                    default => request()->routeIs($route),
+                                    default => request()->routeIs($route) || request()->routeIs($route.'.*'),
                                 };
                             @endphp
                             <a href="{{ route($route) }}" wire:navigate
+                               @if ($isActive) data-nav-active="true" aria-current="page" @endif
                                class="group flex items-center gap-2.5 rounded-lg px-3 py-[8.5px] text-[13.5px] font-medium transition-all duration-150 mb-0.5
                                       {{ $isActive
                                           ? 'bg-sky-50 text-sky-700 font-semibold shadow-2xs dark:bg-[#38BDF8]/[0.14] dark:text-[#38BDF8]'
@@ -426,9 +427,23 @@
                         <div class="space-y-1">
                             @foreach ($items as [$label, $route, $icon, $allowed, $badgeCount])
                                 @php
-                                    $isActive = request()->routeIs($route);
+                                    $isActive = match($route) {
+                                        'dashboard' => request()->routeIs('dashboard'),
+                                        'inventory.register' => request()->routeIs('inventory.register*') || (request()->routeIs('inventory.*') && !request()->routeIs('inventory.count*') && !request()->routeIs('inventory.variance*')),
+                                        'inventory.count' => request()->routeIs('inventory.count*'),
+                                        'inventory.variance' => request()->routeIs('inventory.variance*'),
+                                        'demands.queue' => request()->routeIs('demands.queue*'),
+                                        'demands.index' => (request()->routeIs('demands.*') && !request()->routeIs('demands.queue*')),
+                                        'orders.index' => request()->routeIs('orders.*'),
+                                        'bills.index' => request()->routeIs('bills.*'),
+                                        'petty-cash.index' => request()->routeIs('petty-cash.*'),
+                                        'setup.index' => request()->routeIs('setup.*'),
+                                        'audit.index' => request()->routeIs('audit.*'),
+                                        default => request()->routeIs($route) || request()->routeIs($route.'.*'),
+                                    };
                                 @endphp
                                 <a href="{{ route($route) }}" wire:navigate @click="menu = false"
+                                   @if ($isActive) data-nav-active="true" aria-current="page" @endif
                                    class="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition
                                           {{ $isActive ? 'bg-sky-50 text-sky-600 font-semibold dark:bg-sky-500/15 dark:text-sky-300' : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5' }}">
                                     <div class="flex items-center gap-3">
