@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Prativa Secondary School',
                 'short_name' => 'Prativa',
-                'logo_url' => '/img/logo/prativaLogoWhite.png',
+                'logo_url' => null,
                 'is_active' => true,
             ],
         );

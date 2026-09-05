@@ -238,8 +238,15 @@
                                 <div class="flex items-center gap-3">
                                     {{-- School Logo Thumbnail --}}
                                     <div class="grid size-9 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm overflow-hidden dark:border-white/10 dark:bg-slate-900">
-                                        @if ($school->logo_url)
+                                        @php
+                                            $hasCustom = ! empty($school->logo_url) && ! in_array($school->logo_url, ['/img/logo/prativalogo.png', '/img/logo/prativaLogoWhite.png']);
+                                            $isPrativa = $school->slug === 'prativa' || in_array($school->logo_url, ['/img/logo/prativalogo.png', '/img/logo/prativaLogoWhite.png']);
+                                        @endphp
+                                        @if ($hasCustom)
                                             <img src="{{ $school->logo_url }}" alt="{{ $school->name }}" class="size-full object-contain" />
+                                        @elseif ($isPrativa)
+                                            <img src="/img/logo/prativalogo.png" alt="{{ $school->name }}" class="size-full object-contain dark:hidden" />
+                                            <img src="/img/logo/prativaLogoWhite.png" alt="{{ $school->name }}" class="size-full object-contain hidden dark:block" />
                                         @else
                                             <span class="font-heading font-bold text-xs text-slate-500 dark:text-slate-400">
                                                 {{ mb_substr($school->name, 0, 2) }}

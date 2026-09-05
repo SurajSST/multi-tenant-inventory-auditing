@@ -71,9 +71,8 @@
     ])->filter(fn ($t) => !isset($t[5]) || $t[5])->values();
 @endphp
 <!doctype html>
-<html lang="en" x-data="{ theme: localStorage.getItem('prativa.theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }"
-      x-init="$watch('theme', v => { localStorage.setItem('prativa.theme', v); $el.setAttribute('data-theme', v); })"
-      data-theme="light">
+<html lang="en" x-data="{ theme: localStorage.getItem('prativa.theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') }"
+      x-init="$el.setAttribute('data-theme', theme); $watch('theme', v => { localStorage.setItem('prativa.theme', v); $el.setAttribute('data-theme', v); })">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -96,10 +95,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
-    {{-- Set the theme attribute before first paint --}}
+    {{-- Set the theme attribute before first paint & on Livewire navigate --}}
     <script>
-        document.documentElement.setAttribute('data-theme',
-            localStorage.getItem('prativa.theme') ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+        (function() {
+            function applyTheme() {
+                const saved = localStorage.getItem('prativa.theme');
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = saved || (prefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+            applyTheme();
+            document.addEventListener('livewire:navigated', applyTheme);
+        })();
     </script>
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -112,7 +119,7 @@
     <header class="sticky top-0 z-30 flex items-center justify-between gap-3 bg-white/90 px-4 py-3 backdrop-blur border-b border-slate-200/80 no-print lg:hidden dark:bg-[#090D16]/90 dark:border-white/[0.06]">
         <div class="flex items-center gap-2.5 min-w-0">
             <div class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 p-0.5 border border-slate-200/50 dark:border-white/10 shadow-sm overflow-hidden">
-                @if ($currentSchool?->logo_url)
+                @if ($currentSchool?->hasCustomLogo())
                     <img src="{{ $currentSchool->logo_url }}" alt="{{ $currentSchool->name }}" class="size-full object-contain" />
                 @elseif ($currentSchool)
                     <img src="/img/logo/prativalogo.png" alt="{{ $currentSchool->name }}" class="size-full object-contain dark:hidden" />
@@ -151,7 +158,7 @@
                 <livewire:notification-bell />
             @endauth
 
-            <button type="button" @click="theme = theme === 'dark' ? 'light' : 'dark'" class="grid size-8 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300" aria-label="Toggle theme">
+            <button type="button" @click="theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('prativa.theme', theme); document.documentElement.setAttribute('data-theme', theme);" class="grid size-8 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300" aria-label="Toggle theme">
                 <svg x-show="theme === 'dark'" class="size-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
@@ -172,7 +179,7 @@
     >
         {{-- Workspace Brand Box --}}
         <div class="flex items-center justify-center border-b border-slate-200/80 px-5 py-4.5 dark:border-white/[0.06]">
-            @if ($currentSchool?->logo_url)
+            @if ($currentSchool?->hasCustomLogo())
                 <img src="{{ $currentSchool->logo_url }}" alt="{{ $currentSchool->name }}" class="h-10 w-auto max-w-full object-contain" />
             @elseif ($currentSchool)
                 <img src="/img/logo/prativalogo.png" alt="{{ $currentSchool->name }}" class="h-10 w-auto max-w-full object-contain dark:hidden" />
@@ -307,7 +314,7 @@
                     <p class="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{{ $user?->full_name }}</p>
                     <p class="truncate text-[11px] text-slate-500 dark:text-[#94A3B8]">{{ $user?->designation }}</p>
                 </div>
-                <button type="button" @click="theme = theme === 'dark' ? 'light' : 'dark'"
+                <button type="button" @click="theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('prativa.theme', theme); document.documentElement.setAttribute('data-theme', theme);"
                         class="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
                         :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
                         title="Toggle theme">

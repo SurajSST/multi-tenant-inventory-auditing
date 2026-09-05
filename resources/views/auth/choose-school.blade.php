@@ -15,8 +15,16 @@
                     class="group flex w-full items-center justify-between gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 text-left transition-colors hover:border-indigo-400 hover:bg-indigo-50/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-white/10 dark:bg-white/5 dark:hover:border-sky-400/50 dark:hover:bg-white/10">
                 <div class="flex items-center gap-3 min-w-0">
                     <div class="grid size-10 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm overflow-hidden dark:border-white/10 dark:bg-slate-900">
-                        @if ($membership->tenant->logo_url)
-                            <img src="{{ $membership->tenant->logo_url }}" alt="{{ $membership->tenant->name }}" class="size-full object-contain" />
+                        @php
+                            $t = $membership->tenant;
+                            $hasCustom = is_object($t) && method_exists($t, 'hasCustomLogo') ? $t->hasCustomLogo() : (! empty($t->logo_url) && ! in_array($t->logo_url, ['/img/logo/prativalogo.png', '/img/logo/prativaLogoWhite.png']));
+                            $isPrativa = is_object($t) && method_exists($t, 'isDefaultPrativa') ? $t->isDefaultPrativa() : (($t->slug ?? '') === 'prativa' || in_array($t->logo_url ?? '', ['/img/logo/prativalogo.png', '/img/logo/prativaLogoWhite.png']));
+                        @endphp
+                        @if ($hasCustom)
+                            <img src="{{ $t->logo_url }}" alt="{{ $t->name }}" class="size-full object-contain" />
+                        @elseif ($isPrativa)
+                            <img src="/img/logo/prativalogo.png" alt="{{ $t->name }}" class="size-full object-contain dark:hidden" />
+                            <img src="/img/logo/prativaLogoWhite.png" alt="{{ $t->name }}" class="size-full object-contain hidden dark:block" />
                         @else
                             <span class="font-heading font-bold text-xs text-slate-500 dark:text-slate-400">
                                 {{ mb_substr($membership->tenant->name, 0, 2) }}

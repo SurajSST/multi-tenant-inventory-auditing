@@ -38,6 +38,23 @@ class Tenant extends Model
         return 'slug';
     }
 
+    public function isDefaultPrativa(): bool
+    {
+        return $this->slug === 'prativa' || in_array($this->logo_url, [
+            '/img/logo/prativalogo.png',
+            '/img/logo/prativaLogoWhite.png',
+        ]);
+    }
+
+    public function hasCustomLogo(): bool
+    {
+        return ! empty($this->logo_url)
+            && ! in_array($this->logo_url, [
+                '/img/logo/prativalogo.png',
+                '/img/logo/prativaLogoWhite.png',
+            ]);
+    }
+
     public function logoUrl(?string $fallback = '/img/logo/prativaLogoWhite.png'): string
     {
         return $this->logo_url ?: $fallback;
