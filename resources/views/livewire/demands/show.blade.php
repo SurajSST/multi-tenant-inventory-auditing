@@ -16,6 +16,7 @@
     />
 
     <x-page-header :title="$demand->ref"
+                   :copyable="$demand->ref"
                    :subtitle="$demand->department . ' · raised by ' . $demand->raisedBy->full_name . ', ' . $demand->raisedBy->designation">
         <x-slot:actions>
             <x-button variant="secondary" href="{{ route('demands.print', ['demand' => $demand, 'autoprint' => 1]) }}" target="_blank">
@@ -43,6 +44,168 @@
     @error('withdraw')
         <div class="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-300">{{ $message }}</div>
     @enderror
+
+    {{-- Lifecycle Stepper --}}
+    <div class="mb-6 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-xs dark:border-white/10 dark:bg-slate-900/60 no-print">
+        <div class="overflow-x-auto p-4 sm:p-5">
+            <div class="flex items-center min-w-[640px] justify-between">
+                {{-- Step 1: Raised --}}
+                <div class="flex items-center gap-2.5">
+                    <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xs ring-4 ring-emerald-50 dark:ring-emerald-500/20">
+                        <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold text-slate-900 dark:text-white">Raised</p>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $demand->raisedBy->full_name }}</p>
+                    </div>
+                </div>
+
+                {{-- Connector --}}
+                <div class="h-0.5 flex-1 mx-3 bg-slate-200 dark:bg-white/10"></div>
+
+                {{-- Step 2: Approvals --}}
+                @php
+                    $isRejected = $demand->status === \App\Enums\DemandStatus::REJECTED;
+                    $isApproved = $demand->status === \App\Enums\DemandStatus::APPROVED;
+                @endphp
+                <div class="flex items-center gap-2.5">
+                    @if ($isRejected)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-rose-500 text-white shadow-2xs ring-4 ring-rose-50 dark:ring-rose-500/20">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-rose-600 dark:text-rose-400">Rejected</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">At Tier {{ $demand->approvals->last()?->tier_no }}</p>
+                        </div>
+                    @elseif ($isApproved)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xs ring-4 ring-emerald-50 dark:ring-emerald-500/20">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-900 dark:text-white">Fully Approved</p>
+                            <p class="text-[11px] text-emerald-600 dark:text-emerald-400">All {{ $demand->final_tier }} tiers signed</p>
+                        </div>
+                    @else
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white shadow-2xs ring-4 ring-amber-50 dark:ring-amber-500/20 animate-pulse">
+                            <span class="font-mono text-xs font-bold">{{ $demand->current_tier }}</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">Tier {{ $demand->current_tier }} Deciding</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $tiers->firstWhere('tier_no', $demand->current_tier)?->decider_label ?? 'Approver' }}</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Connector --}}
+                <div class="h-0.5 flex-1 mx-3 {{ $order ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10' }}"></div>
+
+                {{-- Step 3: Purchase Order --}}
+                <div class="flex items-center gap-2.5">
+                    @if ($order)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xs ring-4 ring-emerald-50 dark:ring-emerald-500/20">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-900 dark:text-white">Ordered</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono">{{ $order->ref }}</p>
+                        </div>
+                    @elseif ($isApproved)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-sky-500 bg-sky-50 text-sky-600 dark:bg-sky-500/10 dark:text-sky-400">
+                            <span class="size-2 rounded-full bg-sky-500"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-sky-700 dark:text-sky-300">Ready for PO</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Purchase Officer</p>
+                        </div>
+                    @else
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-200 text-slate-300 dark:border-white/10 dark:text-slate-600">
+                            <span class="size-2 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 dark:text-slate-500">Purchase Order</p>
+                            <p class="text-[11px] text-slate-400 dark:text-slate-600">Pending approval</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Connector --}}
+                <div class="h-0.5 flex-1 mx-3 {{ $receipt ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10' }}"></div>
+
+                {{-- Step 4: Receipt / Goods Inward --}}
+                <div class="flex items-center gap-2.5">
+                    @if ($receipt)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xs ring-4 ring-emerald-50 dark:ring-emerald-500/20">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-900 dark:text-white">Received</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $receipt->receivedBy->full_name }}</p>
+                        </div>
+                    @elseif ($order)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
+                            <span class="size-2 rounded-full bg-amber-500"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-amber-700 dark:text-amber-300">Awaiting Delivery</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Receiving Officer</p>
+                        </div>
+                    @else
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-200 text-slate-300 dark:border-white/10 dark:text-slate-600">
+                            <span class="size-2 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 dark:text-slate-500">Goods Inward</p>
+                            <p class="text-[11px] text-slate-400 dark:text-slate-600">Pending order</p>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Connector --}}
+                <div class="h-0.5 flex-1 mx-3 {{ $bill ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-white/10' }}"></div>
+
+                {{-- Step 5: Billed --}}
+                <div class="flex items-center gap-2.5">
+                    @if ($bill)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full {{ $bill->isFlagged() ? 'bg-amber-500' : 'bg-emerald-500' }} text-white shadow-2xs ring-4 ring-emerald-50 dark:ring-emerald-500/20">
+                            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-900 dark:text-white">Billed</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $bill->match_status->label() }}</p>
+                        </div>
+                    @elseif ($receipt)
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-indigo-500 bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400">
+                            <span class="size-2 rounded-full bg-indigo-500"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">Pending Bill</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">Accounts</p>
+                        </div>
+                    @else
+                        <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-slate-200 text-slate-300 dark:border-white/10 dark:text-slate-600">
+                            <span class="size-2 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-medium text-slate-400 dark:text-slate-500">Settlement</p>
+                            <p class="text-[11px] text-slate-400 dark:text-slate-600">Pending receipt</p>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <x-stat label="Status" :value="$demand->status->label()"

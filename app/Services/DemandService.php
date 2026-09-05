@@ -184,12 +184,12 @@ class DemandService
             'lines.itemType',
             'approvals.actor', 'approvals.actor.currentMembership',
             'orders.vendor',
-            'orders.orderedBy',
-            'orders.receipt.receivedBy',
+            'orders.orderedBy', 'orders.orderedBy.currentMembership',
+            'orders.receipt.receivedBy', 'orders.receipt.receivedBy.currentMembership',
             'orders.receipt.location',
             'orders.receipt.lines.demandLine',
-            'orders.bills.enteredBy',
-            'orders.bills.clearedBy',
+            'orders.bills.enteredBy', 'orders.bills.enteredBy.currentMembership',
+            'orders.bills.clearedBy', 'orders.bills.clearedBy.currentMembership',
         ])->findOrFail($id);
     }
 

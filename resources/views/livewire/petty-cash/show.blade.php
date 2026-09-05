@@ -8,7 +8,7 @@
         :status="$token->status->label()"
     />
 
-    <x-page-header :title="$token->serial" subtitle="Petty cash token">
+    <x-page-header :title="$token->serial" :copyable="$token->serial" subtitle="Petty cash token">
         <x-slot:actions>
             <x-button variant="secondary" href="{{ route('petty-cash.print', ['token' => $token, 'autoprint' => 1]) }}" target="_blank">
                 <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">

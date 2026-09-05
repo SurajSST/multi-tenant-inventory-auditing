@@ -59,6 +59,13 @@ html[data-theme='dark'] body {
     -webkit-overflow-scrolling: touch;
 }
 
+.table-scroll table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: inherit;
+}
+
 .print-only {
     display: none !important;
 }

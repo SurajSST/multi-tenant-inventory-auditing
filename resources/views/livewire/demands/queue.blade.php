@@ -17,20 +17,45 @@
                      note="When a demand form reaches your band it appears here, and nothing moves until you decide." />
         </x-card>
     @else
+        @if ($queue->count() > 1)
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xs dark:border-white/10 dark:bg-slate-900">
+                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                    <input type="checkbox" wire:model.live="selectAll"
+                           class="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:text-sky-400" />
+                    Select all {{ $queue->count() }} demands
+                </label>
+
+                @if (! empty($selected))
+                    <div class="flex items-center gap-2.5">
+                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ count($selected) }} selected</span>
+                        <x-button wire:click="openBulkModal" class="!py-1.5 !text-xs">
+                            Approve Selected ({{ count($selected) }})
+                        </x-button>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div class="space-y-5">
             @foreach ($queue as $demand)
                 <x-card wire:key="q-{{ $demand->id }}" :flush="true">
                     <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-white/10">
-                        <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <a href="{{ route('demands.show', $demand) }}" wire:navigate
-                                   class="font-semibold text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-sky-400">{{ $demand->ref }}</a>
-                                <x-badge>tier {{ $demand->current_tier }} of {{ $demand->final_tier }}</x-badge>
+                        <div class="flex items-start gap-3 min-w-0">
+                            @if ($queue->count() > 1)
+                                <input type="checkbox" value="{{ $demand->id }}" wire:model.live="selected"
+                                       class="mt-1 size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:text-sky-400" />
+                            @endif
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <a href="{{ route('demands.show', $demand) }}" wire:navigate
+                                       class="font-semibold text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-sky-400">{{ $demand->ref }}</a>
+                                    <x-badge>tier {{ $demand->current_tier }} of {{ $demand->final_tier }}</x-badge>
+                                </div>
+                                <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                                    {{ $demand->department }} · raised by {{ $demand->raisedBy->full_name }},
+                                    {{ $demand->raisedBy->designation }} · {{ $demand->created_at->diffForHumans() }}
+                                </p>
                             </div>
-                            <p class="mt-1 text-sm text-slate-600 dark:text-slate-400">
-                                {{ $demand->department }} · raised by {{ $demand->raisedBy->full_name }},
-                                {{ $demand->raisedBy->designation }} · {{ $demand->created_at->diffForHumans() }}
-                            </p>
                         </div>
                         <x-money :amount="$demand->total_amount" class="text-lg font-semibold text-slate-900 dark:text-slate-100" />
                     </div>
@@ -133,6 +158,31 @@
                         <x-textarea id="reason" wire:model="reason" rows="2" />
                     </x-field>
                 @endif
+            </div>
+        </x-sheet>
+    @endif
+
+    {{-- Bulk decision panel --}}
+    @if ($bulkModal)
+        <x-sheet :title="'Bulk Approve ' . count($selected) . ' Demand Forms'" wireClose="closeBulkModal">
+            <x-slot:footer>
+                <x-button variant="secondary" wire:click="closeBulkModal">Cancel</x-button>
+                <x-button wire:click="approveSelected">Sign and approve all</x-button>
+            </x-slot:footer>
+
+            <p class="text-sm text-slate-600 dark:text-slate-300">
+                You are about to approve <strong>{{ count($selected) }}</strong> demand forms at <strong>Tier {{ auth()->user()->approval_tier }}</strong>.
+            </p>
+
+            <p class="mt-3 rounded-lg bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                Each approval will be individually recorded against your name in the immutable audit trail. Any form that requires a subsequent higher tier will advance automatically.
+            </p>
+
+            <div class="mt-5 space-y-4">
+                <x-field label="Meeting or minute reference (optional)" for="bulkMinuteRef"
+                         hint="If deciding under a committee or board resolution.">
+                    <x-input id="bulkMinuteRef" wire:model="bulkMinuteRef" placeholder="e.g. Committee Minute 2082/15" />
+                </x-field>
             </div>
         </x-sheet>
     @endif

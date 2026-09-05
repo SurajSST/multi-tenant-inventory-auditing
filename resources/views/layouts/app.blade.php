@@ -113,6 +113,13 @@
 </head>
 <body class="bg-[#F8FAFC] font-sans text-[#0F172A] antialiased dark:bg-[#080C14] dark:text-[#F8FAFC]">
 
+{{-- Global Top Navigation Progress Bar --}}
+<div id="page-progress"
+     class="fixed top-0 left-0 right-0 h-[2.5px] z-[9999] pointer-events-none opacity-0 transition-opacity duration-150 bg-gradient-to-r from-sky-400 via-blue-600 to-indigo-500 shadow-[0_0_8px_rgba(56,189,248,0.7)]"
+     aria-hidden="true">
+    <div class="h-full w-full animate-pulse bg-white/30"></div>
+</div>
+
 <div class="min-h-screen lg:flex" x-data="{ menu: false, cmdk: false }" @keydown.window="if (($event.ctrlKey || $event.metaKey) && $event.key.toLowerCase() === 'k') { $event.preventDefault(); cmdk = true; }">
 
     {{-- Mobile Top Bar (Clean PWA Topbar) --}}
@@ -273,50 +280,148 @@
             @endforeach
         </nav>
 
-        {{-- Footer Profile & Theme Toggle --}}
-        <div class="border-t border-slate-200/80 p-4 dark:border-white/[0.06]">
-            @if ($currentSchool)
-                <div class="mb-3" @if ($otherSchools->isNotEmpty()) x-data="{ schools: false }" @endif>
-                    <div class="flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2 dark:border-white/[0.08] dark:bg-white/[0.04]">
-                        <span class="grid size-6 shrink-0 place-items-center rounded bg-slate-200 font-mono text-[10px] font-bold text-slate-700 dark:bg-white/10 dark:text-white">
-                            {{ strtoupper(substr($currentSchool->short_name ?: $currentSchool->name, 0, 2)) }}
-                        </span>
-                        <span class="min-w-0 flex-1">
-                            <span class="block truncate text-[12px] font-semibold text-slate-800 dark:text-white">{{ $currentSchool->name }}</span>
-                        </span>
-                        @if ($otherSchools->isNotEmpty())
-                            <button type="button" @click="schools = !schools"
-                                    class="shrink-0 rounded p-1 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 dark:text-[#94A3B8] dark:hover:bg-white/10 dark:hover:text-white"
-                                    aria-label="Switch school">
-                                <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 9l4-4 4 4M16 15l-4 4-4-4" />
+        {{-- Sidebar Footer Status Indicator --}}
+        <div class="border-t border-slate-200/80 px-4 py-3 no-print dark:border-white/[0.06]">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 font-mono">
+                <span class="flex items-center gap-1.5 cursor-help" title="Fiscal Year {{ \App\Support\FiscalYear::label() }} (Bikram Sambat: Shrawan 1 – Ashadh 32)">
+                    <svg class="size-3 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>FY {{ \App\Support\FiscalYear::label() }}</span>
+                </span>
+                <span class="flex items-center gap-1.5 font-sans" title="Integrity and separation-of-duties rules active in MariaDB">
+                    <span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-[10.5px]">Online</span>
+                </span>
+            </div>
+        </div>
+    </aside>
+
+    {{-- Content --}}
+    <div class="min-w-0 flex-1 flex flex-col pb-[calc(64px+env(safe-area-inset-bottom,0px))] lg:pb-0">
+        {{-- Desktop Top Bar --}}
+        <header class="sticky top-0 z-20 hidden items-center justify-between gap-4 border-b border-slate-200/80 bg-white/88 px-6 py-2.5 backdrop-blur no-print lg:flex dark:border-white/[0.06] dark:bg-[#0F1623]/88">
+            {{-- Left: Active School / Tenant Switcher --}}
+            <div class="flex items-center gap-3 min-w-0">
+                @if ($currentSchool)
+                    <div class="relative" x-data="{ open: false }" @click.outside="open = false" @keydown.escape.window="open = false">
+                        <button type="button"
+                                @if ($otherSchools->isNotEmpty() || $user?->isPlatformOwner()) @click="open = !open" @endif
+                                class="group flex items-center gap-2.5 rounded-lg border border-slate-200/90 bg-slate-50/90 px-3 py-1.5 text-left transition-all hover:bg-slate-100 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/[0.08] dark:hover:border-white/20 {{ ($otherSchools->isNotEmpty() || $user?->isPlatformOwner()) ? 'cursor-pointer' : 'cursor-default' }}">
+                            <span class="grid size-6 shrink-0 place-items-center rounded-md bg-sky-500/15 font-mono text-[10.5px] font-bold text-sky-600 dark:bg-sky-500/20 dark:text-sky-400">
+                                {{ strtoupper(substr($currentSchool->short_name ?: $currentSchool->name, 0, 2)) }}
+                            </span>
+                            <span class="min-w-0">
+                                <span class="block truncate text-[12.5px] font-semibold text-slate-800 dark:text-slate-100 max-w-[180px]">{{ $currentSchool->name }}</span>
+                            </span>
+                            @if ($otherSchools->isNotEmpty() || $user?->isPlatformOwner())
+                                <svg class="size-3.5 shrink-0 text-slate-400 transition-transform duration-150 dark:text-slate-500" :class="{ 'rotate-180': open }" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                                 </svg>
-                            </button>
+                            @endif
+                        </button>
+
+                        @if ($otherSchools->isNotEmpty() || $user?->isPlatformOwner())
+                            <div x-show="open" x-cloak
+                                 x-transition:enter="transition ease-out duration-100"
+                                 x-transition:enter-start="transform opacity-0 scale-95"
+                                 x-transition:enter-end="transform opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-75"
+                                 x-transition:leave-start="transform opacity-100 scale-100"
+                                 x-transition:leave-end="transform opacity-0 scale-95"
+                                 class="absolute left-0 mt-1.5 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 dark:border-white/10 dark:bg-[#0F1623] dark:ring-white/10 z-50">
+                                
+                                @if ($otherSchools->isNotEmpty())
+                                    <div class="px-2.5 py-1.5">
+                                        <p class="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Switch School</p>
+                                    </div>
+                                    <form method="POST" action="{{ route('tenant.switch') }}" class="space-y-0.5">
+                                        @csrf
+                                        @foreach ($otherSchools as $membership)
+                                            <button type="submit" name="tenant_id" value="{{ $membership->tenant_id }}"
+                                                    class="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs transition hover:bg-slate-100 dark:hover:bg-white/[0.08]">
+                                                <span class="truncate font-medium text-slate-800 dark:text-slate-200">{{ $membership->tenant->name }}</span>
+                                                <span class="ml-2 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[9.5px] text-slate-500 dark:bg-white/10 dark:text-slate-400">{{ $membership->designation }}</span>
+                                            </button>
+                                        @endforeach
+                                    </form>
+                                @endif
+
+                                @if ($user?->isPlatformOwner())
+                                    @if ($otherSchools->isNotEmpty())
+                                        <div class="my-1 border-t border-slate-100 dark:border-white/10"></div>
+                                    @endif
+                                    <form method="POST" action="{{ route('platform.exit') }}">
+                                        @csrf
+                                        <button type="submit" class="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-semibold text-sky-600 transition hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-500/10">
+                                            <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                            </svg>
+                                            Exit to Platform Console
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
                         @endif
                     </div>
+                @else
+                    <div class="flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-50/50 px-3 py-1.5 dark:border-sky-500/30 dark:bg-sky-500/10">
+                        <span class="grid size-5 place-items-center rounded bg-sky-500/15 font-mono text-[10px] font-bold text-sky-600 dark:bg-sky-500/20 dark:text-sky-400">P</span>
+                        <span class="text-xs font-semibold text-sky-800 dark:text-sky-300">Platform Console</span>
+                    </div>
+                @endif
 
-                    @if ($otherSchools->isNotEmpty())
-                        <form method="POST" action="{{ route('tenant.switch') }}" x-show="schools" x-cloak class="mt-1.5 space-y-1">
-                            @csrf
-                            @foreach ($otherSchools as $membership)
-                                <button type="submit" name="tenant_id" value="{{ $membership->tenant_id }}"
-                                        class="block w-full truncate rounded-md px-2.5 py-1.5 text-left text-[12px] text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-[#94A3B8] dark:hover:bg-white/[0.06] dark:hover:text-white">
-                                    {{ $membership->tenant->name }}
-                                    <span class="block truncate text-[10.5px] text-slate-400 dark:text-[#64748B]">{{ $membership->designation }}</span>
-                                </button>
-                            @endforeach
-                        </form>
+                {{-- Breadcrumbs --}}
+                <span class="hidden md:inline text-slate-300 dark:text-slate-700 select-none">/</span>
+                <nav class="hidden md:flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 truncate" aria-label="Breadcrumb">
+                    @php
+                        $route = request()->route()?->getName() ?? '';
+                        $sectionName = match(true) {
+                            str_starts_with($route, 'inventory.register') => 'Stock Register',
+                            str_starts_with($route, 'inventory.unit-codes') => 'Unit Codes',
+                            str_starts_with($route, 'inventory.history') => 'Stock History',
+                            str_starts_with($route, 'inventory.count') => 'Audit Count',
+                            str_starts_with($route, 'inventory.variance') => 'Variance Analysis',
+                            str_starts_with($route, 'demands.queue') => 'Approval Queue',
+                            str_starts_with($route, 'demands.create') => 'New Demand',
+                            str_starts_with($route, 'demands') => 'Demands',
+                            str_starts_with($route, 'orders.create') => 'New Order',
+                            str_starts_with($route, 'orders.receive') => 'Receive Goods',
+                            str_starts_with($route, 'orders') => 'Orders & Receipts',
+                            str_starts_with($route, 'bills.create') => 'Enter Bill',
+                            str_starts_with($route, 'bills') => 'Bills & 3-Way Match',
+                            str_starts_with($route, 'petty-cash') => 'Petty Cash',
+                            str_starts_with($route, 'setup') => 'Governance Setup',
+                            str_starts_with($route, 'audit') => 'Audit Trail',
+                            $route === 'dashboard' => 'Overview',
+                            default => null,
+                        };
+                    @endphp
+                    @if ($sectionName)
+                        <span class="font-medium text-slate-600 dark:text-slate-300">{{ $sectionName }}</span>
                     @endif
-                </div>
-            @endif
+                    @if (isset($title) && $title !== $sectionName && $title !== 'Prativa Stock and Procurement' && !str_contains($title, 'Prativa'))
+                        <span class="text-slate-300 dark:text-slate-700 select-none">/</span>
+                        <span class="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{{ $title }}</span>
+                    @endif
+                </nav>
+            </div>
 
-            <div class="mb-3 flex items-center justify-between gap-2">
-                <div class="min-w-0">
-                    <p class="truncate text-[13px] font-semibold text-slate-900 dark:text-white">{{ $user?->full_name }}</p>
-                    <p class="truncate text-[11px] text-slate-500 dark:text-[#94A3B8]">{{ $user?->designation }}</p>
-                </div>
-                <button type="button" @click="theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('prativa.theme', theme); document.documentElement.setAttribute('data-theme', theme);"
-                        class="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+            {{-- Right: Search, Theme Toggle, Notification Bell, User Menu Dropdown --}}
+            <div class="flex items-center gap-2.5">
+                <button type="button" @click="cmdk = true"
+                        class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12.5px] font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10">
+                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z" />
+                    </svg>
+                    Search
+                    <kbd class="rounded border border-slate-300 bg-white px-1 font-mono text-[10px] text-slate-400 dark:border-white/10 dark:bg-white/10 dark:text-slate-500"
+                         x-text="navigator.platform.toUpperCase().indexOf('MAC') >= 0 ? '⌘K' : 'Ctrl K'">Ctrl K</kbd>
+                </button>
+
+                <button type="button"
+                        @click="theme = theme === 'dark' ? 'light' : 'dark'; localStorage.setItem('prativa.theme', theme); document.documentElement.setAttribute('data-theme', theme);"
+                        class="grid size-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
                         :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
                         title="Toggle theme">
                     <svg x-show="theme === 'dark'" class="size-4 text-amber-300" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -326,39 +431,74 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                     </svg>
                 </button>
-            </div>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12.5px] font-semibold text-slate-700 transition-all hover:bg-slate-100 hover:text-slate-900 hover:border-slate-300 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-white dark:hover:bg-white/10 dark:hover:border-white/20">
-                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-                    </svg>
-                    Sign out
-                </button>
-            </form>
-        </div>
-    </aside>
-
-    {{-- Content --}}
-    <div class="min-w-0 flex-1 flex flex-col pb-[calc(64px+env(safe-area-inset-bottom,0px))] lg:pb-0">
-        {{-- Desktop Top Bar --}}
-        <header class="sticky top-0 z-20 hidden items-center gap-3 border-b border-slate-200/80 bg-white/88 px-8 py-3.5 backdrop-blur no-print lg:flex dark:border-white/[0.06] dark:bg-[#0F1623]/88">
-            <div class="ml-auto flex items-center gap-2.5">
-                <button type="button" @click="cmdk = true"
-                        class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12.5px] font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10">
-                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5A6.5 6.5 0 114 10.5a6.5 6.5 0 0113 0z" />
-                    </svg>
-                    Search
-                    <kbd class="rounded border border-slate-300 bg-white px-1 font-mono text-[10px] text-slate-400 dark:border-white/10 dark:bg-white/10 dark:text-slate-500">Ctrl K</kbd>
-                </button>
 
                 @auth
                     <livewire:notification-bell />
                 @endauth
 
-                <div class="grid size-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-[#2563EB] to-[#0284C7] font-mono text-[11px] font-bold text-white shadow-sm border border-white/15">
-                    {{ collect(explode(' ', $user?->full_name ?? ''))->map(fn ($p) => mb_substr($p, 0, 1))->take(2)->implode('') }}
+                {{-- User Profile & Sign Out Dropdown --}}
+                <div class="relative" x-data="{ userMenu: false }" @click.outside="userMenu = false" @keydown.escape.window="userMenu = false">
+                    <button type="button" @click="userMenu = !userMenu"
+                            class="flex items-center gap-2 rounded-lg border border-slate-200/90 bg-slate-50/80 p-1 pr-2.5 transition hover:bg-slate-100 hover:border-slate-300 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+                            aria-label="User menu">
+                        <div class="grid size-7 shrink-0 place-items-center rounded-md bg-gradient-to-br from-[#2563EB] to-[#0284C7] font-mono text-[11px] font-bold text-white shadow-2xs border border-white/20">
+                            {{ collect(explode(' ', $user?->full_name ?? ''))->map(fn ($p) => mb_substr($p, 0, 1))->take(2)->implode('') }}
+                        </div>
+                        <div class="hidden sm:block text-left min-w-0 max-w-[120px]">
+                            <p class="truncate text-[12px] font-semibold leading-tight text-slate-800 dark:text-slate-100">{{ $user?->full_name }}</p>
+                            <p class="truncate text-[10px] text-slate-500 dark:text-slate-400">{{ $user?->designation }}</p>
+                        </div>
+                        <svg class="size-3.5 text-slate-400 transition-transform duration-150 dark:text-slate-500" :class="{ 'rotate-180': userMenu }" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+
+                    <div x-show="userMenu" x-cloak
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="transform opacity-0 scale-95"
+                         x-transition:enter-end="transform opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="transform opacity-100 scale-100"
+                         x-transition:leave-end="transform opacity-0 scale-95"
+                         class="absolute right-0 mt-1.5 w-56 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl ring-1 ring-black/5 dark:border-white/10 dark:bg-[#0F1623] dark:ring-white/10 z-50">
+                        
+                        <div class="px-3 py-2 border-b border-slate-100 dark:border-white/10">
+                            <p class="truncate text-xs font-semibold text-slate-900 dark:text-white">{{ $user?->full_name }}</p>
+                            <div class="mt-1 flex items-center gap-1.5">
+                                <span class="inline-block rounded bg-sky-50 px-1.5 py-0.5 font-mono text-[9.5px] font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                                    {{ $user?->designation }}
+                                </span>
+                                @if ($user?->approval_tier > 0)
+                                    <span class="inline-block rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[9.5px] font-semibold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                                        Tier {{ $user->approval_tier }}
+                                    </span>
+                                @endif
+                            </div>
+                        </div>
+
+                        <div class="py-1">
+                            <a href="{{ route('password.change') }}" wire:navigate
+                               class="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white">
+                                <svg class="size-3.5 text-slate-400 dark:text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 0 1 2 2m4 0a6 6 0 0 1-7.743 5.743L11 17H9v2H7v2H4a1 1 0 0 1-1-1v-2.586a1 1 0 0 1 .293-.707l5.964-5.964A6 6 0 1 1 21 9z" />
+                                </svg>
+                                Change Password
+                            </a>
+                        </div>
+
+                        <div class="border-t border-slate-100 pt-1 dark:border-white/10">
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit"
+                                        class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold text-rose-600 transition hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:hover:bg-rose-500/10">
+                                    <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                                    </svg>
+                                    Sign out
+                                </button>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>
@@ -411,12 +551,29 @@
             {{-- Grab Bar --}}
             <div class="mx-auto mt-3 h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-700"></div>
 
-            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-3.5 dark:border-white/10">
-                <div>
-                    <h3 class="font-heading text-base font-bold text-slate-900 dark:text-white">{{ $user?->full_name }}</h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">{{ $user?->designation }}</p>
+            <div class="border-b border-slate-100 px-5 py-3.5 dark:border-white/10">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="font-heading text-base font-bold text-slate-900 dark:text-white">{{ $user?->full_name }}</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">{{ $user?->designation }}</p>
+                    </div>
+                    <button type="button" @click="menu = false" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 text-lg font-bold" aria-label="Close">×</button>
                 </div>
-                <button type="button" @click="menu = false" class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 text-lg font-bold" aria-label="Close">×</button>
+                @if ($otherSchools->isNotEmpty())
+                    <div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/10">
+                        <p class="font-mono text-[9.5px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5">Switch School</p>
+                        <form method="POST" action="{{ route('tenant.switch') }}" class="space-y-1">
+                            @csrf
+                            @foreach ($otherSchools as $membership)
+                                <button type="submit" name="tenant_id" value="{{ $membership->tenant_id }}"
+                                        class="flex w-full items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-left text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10">
+                                    <span class="truncate">{{ $membership->tenant->name }}</span>
+                                    <span class="font-mono text-[10px] text-slate-400">{{ $membership->designation }}</span>
+                                </button>
+                            @endforeach
+                        </form>
+                    </div>
+                @endif
             </div>
 
             {{-- All Nav Items --}}
@@ -463,7 +620,14 @@
             </div>
 
             {{-- Bottom Footer --}}
-            <div class="border-t border-slate-100 p-4 bg-slate-50 dark:bg-slate-900/50 dark:border-white/10">
+            <div class="border-t border-slate-100 p-4 bg-slate-50 dark:bg-slate-900/50 dark:border-white/10 space-y-2">
+                <a href="{{ route('password.change') }}" wire:navigate @click="menu = false"
+                   class="flex w-full items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 py-2 px-4 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/10">
+                    <svg class="size-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 0 1 2 2m4 0a6 6 0 0 1-7.743 5.743L11 17H9v2H7v2H4a1 1 0 0 1-1-1v-2.586a1 1 0 0 1 .293-.707l5.964-5.964A6 6 0 1 1 21 9z" />
+                    </svg>
+                    Change Password
+                </a>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <button class="flex w-full items-center justify-center gap-2 rounded-xl bg-rose-50 border border-rose-200 py-2.5 px-4 text-xs font-semibold text-rose-700 transition hover:bg-rose-100 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-300">
@@ -481,8 +645,17 @@
     <x-toast />
 </div>
 
-{{-- Register PWA Service Worker --}}
+{{-- Register PWA Service Worker & Navigation Progress Handler --}}
 <script>
+    document.addEventListener('livewire:navigating', () => {
+        const bar = document.getElementById('page-progress');
+        if (bar) bar.style.opacity = '1';
+    });
+    document.addEventListener('livewire:navigated', () => {
+        const bar = document.getElementById('page-progress');
+        if (bar) bar.style.opacity = '0';
+    });
+
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js').catch(err => {

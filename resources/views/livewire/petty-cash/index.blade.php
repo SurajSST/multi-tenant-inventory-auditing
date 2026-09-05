@@ -78,7 +78,7 @@
                             <th scope="col" class="sticky right-0 z-20 border-l border-slate-200 bg-slate-50 dark:border-white/10 dark:bg-[#111C2E] px-5 py-2.5 text-right font-medium no-print">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    <tbody class="divide-y divide-slate-100 transition-opacity duration-150 dark:divide-white/5" wire:loading.class="opacity-50 pointer-events-none">
                         @foreach ($tokens as $token)
                             <tr wire:key="token-{{ $token->id }}" class="group hover:bg-slate-50 dark:hover:bg-white/5">
                                 <td class="px-5 py-2.5">

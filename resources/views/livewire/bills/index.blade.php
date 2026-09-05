@@ -81,7 +81,7 @@
                             <th scope="col" class="px-5 py-2.5 font-medium">Entered by</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    <tbody class="divide-y divide-slate-100 transition-opacity duration-150 dark:divide-white/5" wire:loading.class="opacity-50 pointer-events-none">
                         @foreach ($bills as $bill)
                             <tr wire:key="bill-{{ $bill->id }}" class="{{ $bill->isFlagged() ? 'bg-rose-50/50 dark:bg-rose-500/10' : '' }} hover:bg-slate-50 dark:hover:bg-white/5">
                                 <td class="px-5 py-2.5">

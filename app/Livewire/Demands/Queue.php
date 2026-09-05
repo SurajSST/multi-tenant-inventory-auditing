@@ -23,9 +23,82 @@ class Queue extends Component
 
     public string $minuteRef = '';
 
+    /** @var array<string> */
+    public array $selected = [];
+
+    public bool $selectAll = false;
+
+    public bool $bulkModal = false;
+
+    public string $bulkMinuteRef = '';
+
     public function mount(): void
     {
         abort_unless(auth()->user()->approval_tier > 0 || auth()->user()->can('approve-demands'), 403, 'You do not have pending approvals.');
+    }
+
+    public function updatedSelectAll(bool $value, DemandService $demands): void
+    {
+        if ($value) {
+            $this->selected = $demands->myQueue(auth()->user())
+                ->pluck('id')
+                ->map(fn ($id) => (string) $id)
+                ->all();
+        } else {
+            $this->selected = [];
+        }
+    }
+
+    public function openBulkModal(): void
+    {
+        if (empty($this->selected)) {
+            return;
+        }
+
+        $this->bulkModal = true;
+        $this->bulkMinuteRef = '';
+        $this->resetErrorBag();
+    }
+
+    public function closeBulkModal(): void
+    {
+        $this->bulkModal = false;
+        $this->bulkMinuteRef = '';
+    }
+
+    public function approveSelected(DemandService $demands): void
+    {
+        if (empty($this->selected)) {
+            return;
+        }
+
+        $approvedCount = 0;
+        $errors = [];
+
+        foreach ($this->selected as $demandId) {
+            try {
+                $demands->decide(
+                    demandId: $demandId,
+                    action: ApprovalAction::APPROVE,
+                    user: auth()->user(),
+                    reason: null,
+                    minuteRef: $this->bulkMinuteRef ?: null,
+                );
+                $approvedCount++;
+            } catch (\Throwable $e) {
+                $errors[] = $e->getMessage();
+            }
+        }
+
+        $this->selected = [];
+        $this->selectAll = false;
+        $this->closeBulkModal();
+
+        if ($errors) {
+            session()->flash('status', "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors)));
+        } else {
+            session()->flash('status', "Successfully approved {$approvedCount} demand form(s).");
+        }
     }
 
     public function open(string $demandId, string $action): void

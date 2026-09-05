@@ -69,7 +69,7 @@
                             <th scope="col" class="px-5 py-2.5 text-left font-medium">Last counted</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    <tbody class="divide-y divide-slate-100 dark:divide-white/5 transition-opacity duration-150" wire:loading.class="opacity-50 pointer-events-none">
                         @foreach ($rows as $row)
                             <tr class="hover:bg-slate-50 dark:hover:bg-white/5">
                                 <td class="sticky left-0 z-10 bg-white px-5 py-2.5 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-white/5">

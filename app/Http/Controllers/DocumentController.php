@@ -31,7 +31,15 @@ class DocumentController extends Controller
             'You can only open demand forms you raised, or ones that come to you to decide.'
         );
 
-        $demand->load(['raisedBy', 'lines.itemType', 'approvals.actor', 'orders.vendor', 'orders.receipt.receivedBy', 'orders.bills']);
+        $demand->load([
+            'raisedBy', 'raisedBy.currentMembership',
+            'lines.itemType',
+            'approvals.actor', 'approvals.actor.currentMembership',
+            'orders.vendor',
+            'orders.orderedBy', 'orders.orderedBy.currentMembership',
+            'orders.receipt.receivedBy', 'orders.receipt.receivedBy.currentMembership',
+            'orders.bills.enteredBy', 'orders.bills.enteredBy.currentMembership',
+        ]);
         $tiers = ApprovalTier::orderBy('tier_no')->get();
         $school = app(TenantContext::class)->current();
         $schoolName = $school?->name ?? config('prativa.school_name', 'Prativa Secondary School');
@@ -66,7 +74,16 @@ class DocumentController extends Controller
             'You are not authorized to view this purchase order.'
         );
 
-        $order->load(['orderedBy', 'vendor', 'demand.lines.itemType', 'demand.raisedBy', 'receipt.receivedBy', 'receipt.lines', 'bills']);
+        $order->load([
+            'orderedBy', 'orderedBy.currentMembership',
+            'vendor',
+            'demand.lines.itemType',
+            'demand.raisedBy', 'demand.raisedBy.currentMembership',
+            'demand.approvals.actor', 'demand.approvals.actor.currentMembership',
+            'receipt.receivedBy', 'receipt.receivedBy.currentMembership',
+            'receipt.lines',
+            'bills.enteredBy', 'bills.enteredBy.currentMembership',
+        ]);
         $school = app(TenantContext::class)->current();
         $schoolName = $school?->name ?? config('prativa.school_name', 'Prativa Secondary School');
 
@@ -96,7 +113,10 @@ class DocumentController extends Controller
             'You are not authorized to view this petty cash token.'
         );
 
-        $token->load(['issuedBy', 'paidBy']);
+        $token->load([
+            'issuedBy', 'issuedBy.currentMembership',
+            'paidBy', 'paidBy.currentMembership',
+        ]);
         $school = app(TenantContext::class)->current();
         $schoolName = $school?->name ?? config('prativa.school_name', 'Prativa Secondary School');
 

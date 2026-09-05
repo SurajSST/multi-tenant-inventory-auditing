@@ -80,9 +80,13 @@ class Index extends Component
                     ->orderBy('full_name')
                     ->get(['id', 'full_name'])
                 : collect([$user]),
-            'entities' => ($canViewAll ? AuditLog::distinct() : AuditLog::where('actor_id', $user->id)->distinct())
-                ->orderBy('entity')
-                ->pluck('entity'),
+            'entities' => cache()->remember(
+                $canViewAll ? 'audit_entities_'.app(TenantContext::class)->idOrFail() : 'audit_entities_user_'.$user->id,
+                now()->addMinutes(10),
+                fn () => ($canViewAll ? AuditLog::distinct() : AuditLog::where('actor_id', $user->id)->distinct())
+                    ->orderBy('entity')
+                    ->pluck('entity')
+            ),
         ])->title($canViewAll ? 'Audit Trail' : 'My Activity Trail');
     }
 }

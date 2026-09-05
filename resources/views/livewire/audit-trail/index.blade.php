@@ -63,7 +63,7 @@
                             <th scope="col" class="px-5 py-3 font-semibold">Activity Details</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    <tbody class="divide-y divide-slate-100 dark:divide-white/5 transition-opacity duration-150" wire:loading.class="opacity-50 pointer-events-none">
                         @foreach ($entries as $entry)
                             @php
                                 $actionUpper = strtoupper($entry->action);

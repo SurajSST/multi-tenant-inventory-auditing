@@ -33,7 +33,7 @@ class OrderService
         return DemandForm::query()
             ->where('status', DemandStatus::APPROVED)
             ->whereDoesntHave('orders')
-            ->with(['lines.itemType', 'raisedBy', 'raisedBy.currentMembership', 'approvals.actor'])
+            ->with(['lines.itemType', 'raisedBy', 'raisedBy.currentMembership', 'approvals.actor', 'approvals.actor.currentMembership'])
             ->orderBy('closed_at')
             ->get();
     }
@@ -165,10 +165,13 @@ class OrderService
     {
         return PurchaseOrder::with([
             'vendor', 'orderedBy', 'orderedBy.currentMembership',
-            'demand.lines.itemType', 'demand.raisedBy', 'demand.approvals.actor',
+            'demand.lines.itemType',
+            'demand.raisedBy', 'demand.raisedBy.currentMembership',
+            'demand.approvals.actor', 'demand.approvals.actor.currentMembership',
             'receipt.receivedBy', 'receipt.receivedBy.currentMembership',
             'receipt.location', 'receipt.lines.demandLine',
-            'bills.enteredBy', 'bills.clearedBy',
+            'bills.enteredBy', 'bills.enteredBy.currentMembership',
+            'bills.clearedBy', 'bills.clearedBy.currentMembership',
         ])->findOrFail($id);
     }
 

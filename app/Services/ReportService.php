@@ -34,13 +34,20 @@ class ReportService
 
     public function dashboard(): array
     {
+        $units = $this->unitsOnRegisterByLifespan();
+
+        $billStats = DB::table('bills')
+            ->where('tenant_id', $this->tenantId())
+            ->selectRaw('COUNT(*) as total_count, COALESCE(SUM(bill_amount), 0) as total_amount, COUNT(CASE WHEN match_status = ? THEN 1 END) as mismatches', [MatchStatus::MISMATCH->value])
+            ->first();
+
         return [
-            'durable_units' => $this->unitsOnRegister(Lifespan::DURABLE),
-            'consumable_units' => $this->unitsOnRegister(Lifespan::CONSUMABLE),
+            'durable_units' => $units[Lifespan::DURABLE->value] ?? 0,
+            'consumable_units' => $units[Lifespan::CONSUMABLE->value] ?? 0,
             'pending_approvals' => DemandForm::where('status', DemandStatus::PENDING)->count(),
-            'bills_entered' => Bill::count(),
-            'total_billed' => Money::of(Bill::sum('bill_amount')),
-            'bill_mismatches' => Bill::where('match_status', MatchStatus::MISMATCH)->count(),
+            'bills_entered' => (int) ($billStats->total_count ?? 0),
+            'total_billed' => Money::of($billStats->total_amount ?? 0),
+            'bill_mismatches' => (int) ($billStats->mismatches ?? 0),
             'open_tokens' => PettyCashToken::whereIn('status', TokenStatus::open())->count(),
             'awaiting_order' => DemandForm::where('status', DemandStatus::APPROVED)
                 ->whereDoesntHave('orders')->count(),
@@ -81,16 +88,23 @@ class ReportService
         })->values();
     }
 
-    private function unitsOnRegister(Lifespan $lifespan): int
+    /** @return array<string, int> */
+    private function unitsOnRegisterByLifespan(): array
     {
-        $row = DB::selectOne('
-            SELECT COALESCE(SUM(cs.quantity), 0) AS n
+        $rows = DB::select('
+            SELECT it.lifespan, COALESCE(SUM(cs.quantity), 0) AS n
             FROM v_current_stock cs
             JOIN item_types it ON it.id = cs.item_type_id
-            WHERE it.tenant_id = ? AND it.lifespan = ?
-        ', [$this->tenantId(), $lifespan->value]);
+            WHERE it.tenant_id = ?
+            GROUP BY it.lifespan
+        ', [$this->tenantId()]);
 
-        return (int) ($row->n ?? 0);
+        return collect($rows)->pluck('n', 'lifespan')->map(fn ($n) => (int) $n)->all();
+    }
+
+    private function unitsOnRegister(Lifespan $lifespan): int
+    {
+        return $this->unitsOnRegisterByLifespan()[$lifespan->value] ?? 0;
     }
 
     public function stockByCategory(): Collection

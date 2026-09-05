@@ -65,7 +65,7 @@
                             <th scope="col" class="px-5 py-3 text-right font-medium">Action</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                    <tbody class="divide-y divide-slate-100 dark:divide-white/5 transition-opacity duration-150" wire:loading.class="opacity-50 pointer-events-none">
                         @foreach ($demands as $demand)
                             <tr wire:key="demand-{{ $demand->id }}" class="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors">
                                 <td class="px-5 py-3.5 whitespace-nowrap">

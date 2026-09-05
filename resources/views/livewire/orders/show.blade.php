@@ -11,6 +11,7 @@
     />
 
     <x-page-header :title="$order->ref"
+                   :copyable="$order->ref"
                    :subtitle="$order->vendor->name . ' · against ' . $order->demand->ref">
         <x-slot:actions>
             @can('receive-goods')
