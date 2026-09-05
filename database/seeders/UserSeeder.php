@@ -51,7 +51,7 @@ class UserSeeder extends Seeder
                     'full_name' => $name,
                     'password' => $password,
                     'is_active' => true,
-                    'must_reset_password' => true,
+                    'must_reset_password' => false,
                 ],
             );
 

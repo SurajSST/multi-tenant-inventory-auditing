@@ -105,7 +105,6 @@ class DatabaseSeeder extends Seeder
         $this->command?->newLine();
         $this->command?->info('Platform owner: admin@gmail.com / admin123 — every school, plus the console at /platform');
         $this->command?->info('Staff accounts: md@prativa.edu.np / '.config('prativa.seed_password'));
-        $this->command?->line('Each staff account is forced to change its password on first sign-in.');
 
         if (app()->environment('local')) {
             $this->command?->line('Two schools are seeded locally so tenant isolation is visible on screen.');

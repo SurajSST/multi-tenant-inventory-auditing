@@ -27,29 +27,4 @@
             </a>
         @endforeach
     </div>
-
-    <x-card class="mt-6" title="Before this handles real money">
-        <ul class="space-y-2.5 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-            <li class="flex gap-2.5">
-                <span class="text-slate-400 dark:text-slate-600">1.</span>
-                <span><strong class="text-slate-900 dark:text-slate-100">Backups.</strong> A nightly <code class="rounded bg-slate-100 px-1 text-xs dark:bg-white/10">mysqldump</code> copied off the machine. An audit system with no backup is not an audit system.</span>
-            </li>
-            <li class="flex gap-2.5">
-                <span class="text-slate-400 dark:text-slate-600">2.</span>
-                <span><strong class="text-slate-900 dark:text-slate-100">TLS.</strong> Put nginx or Caddy in front. Never run this over plain HTTP, even inside the school network.</span>
-            </li>
-            <li class="flex gap-2.5">
-                <span class="text-slate-400 dark:text-slate-600">3.</span>
-                <span><strong class="text-slate-900 dark:text-slate-100">Real opening balances.</strong> The stock figures loaded at setup are sample data. Replace them with the auditor's actual count, or the variance report compares real purchases against invented stock.</span>
-            </li>
-            <li class="flex gap-2.5">
-                <span class="text-slate-400 dark:text-slate-600">4.</span>
-                <span><strong class="text-slate-900 dark:text-slate-100">The consumables list.</strong> The consumable item types are placeholders — the school's original sheet has none.</span>
-            </li>
-            <li class="flex gap-2.5">
-                <span class="text-slate-400 dark:text-slate-600">5.</span>
-                <span><strong class="text-slate-900 dark:text-slate-100">Change the MD password</strong> before anybody else touches the system.</span>
-            </li>
-        </ul>
-    </x-card>
 </div>
