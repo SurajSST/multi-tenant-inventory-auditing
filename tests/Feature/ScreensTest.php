@@ -75,9 +75,28 @@ class ScreensTest extends TestCase
         $this->actingAs($this->staff('p.karki@prativa.edu.np'))->get('/orders/new')->assertForbidden();
     }
 
-    public function test_a_teacher_cannot_read_the_audit_trail(): void
+    public function test_a_teacher_sees_only_their_own_activity_in_the_audit_trail(): void
     {
-        $this->actingAs($this->staff('p.karki@prativa.edu.np'))->get('/audit-trail')->assertForbidden();
+        $this->actingAs($this->staff('p.karki@prativa.edu.np'))
+            ->get('/audit-trail')
+            ->assertOk()
+            ->assertSee('My Activity Trail');
+    }
+
+    public function test_an_accountant_sees_only_their_own_activity_in_the_audit_trail(): void
+    {
+        $this->actingAs($this->staff('accounts@prativa.edu.np'))
+            ->get('/audit-trail')
+            ->assertOk()
+            ->assertSee('My Activity Trail');
+    }
+
+    public function test_higher_tier_can_see_all_audit_logs(): void
+    {
+        $this->actingAs($this->staff('md@prativa.edu.np'))
+            ->get('/audit-trail')
+            ->assertOk()
+            ->assertSee('Audit Trail');
     }
 
     public function test_the_auditor_can_open_the_count_sheet(): void

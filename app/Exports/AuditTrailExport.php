@@ -15,31 +15,35 @@ class AuditTrailExport extends Workbook
         SettingService $settings,
         private ?string $from = null,
         private ?string $to = null,
+        private ?string $actorId = null,
     ) {
         parent::__construct($settings);
     }
 
     public function title(): string
     {
-        return 'Audit Trail';
+        return $this->actorId ? 'My Activity Trail' : 'Audit Trail';
     }
 
     public function filename(): string
     {
-        return 'audit-trail-'.now()->format('Y-m-d').'.xlsx';
+        $prefix = $this->actorId ? 'my-activity-trail-' : 'audit-trail-';
+
+        return $prefix.now()->format('Y-m-d').'.xlsx';
     }
 
     protected function build(): void
     {
         $sheet = $this->book->getActiveSheet();
-        $sheet->setTitle('Audit Trail');
+        $title = $this->title();
+        $sheet->setTitle($this->actorId ? 'My Activity' : 'Audit Trail');
 
         $headings = ['S.N.', 'When', 'Who', 'Designation', 'Action', 'Record', 'Detail', 'IP'];
         $columns = count($headings);
 
         $this->titleRows(
             $sheet,
-            'Audit Trail',
+            $title,
             'Append-only: no entry here has ever been edited or removed. '.$this->stamp(),
             $columns,
         );
@@ -50,6 +54,7 @@ class AuditTrailExport extends Workbook
         $serial = 1;
 
         AuditLog::with(['actor', 'actor.currentMembership'])
+            ->when($this->actorId, fn ($q) => $q->where('actor_id', $this->actorId))
             ->when($this->from, fn ($q) => $q->where('at', '>=', $this->from.' 00:00:00'))
             ->when($this->to, fn ($q) => $q->where('at', '<=', $this->to.' 23:59:59'))
             ->orderBy('at')

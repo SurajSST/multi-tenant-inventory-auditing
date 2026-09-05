@@ -94,8 +94,7 @@ Route::middleware('auth')->group(function () {
         Route::post('exit', [TenantController::class, 'exitToPlatform'])->name('exit');
     });
 
-    Route::get('audit-trail', Livewire\AuditTrail\Index::class)
-        ->middleware('role:SUPER_ADMIN,CHAIRMAN,ACCOUNTS')->name('audit.index');
+    Route::get('audit-trail', Livewire\AuditTrail\Index::class)->name('audit.index');
 
     // Excel exports
     Route::prefix('export')->name('export.')->group(function () {

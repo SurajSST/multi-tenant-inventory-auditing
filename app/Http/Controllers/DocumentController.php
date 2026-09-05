@@ -23,6 +23,14 @@ class DocumentController extends Controller
 
     public function demand(DemandForm $demand, Request $request): Response
     {
+        abort_unless(
+            $request->user()->seesEverything()
+            || $demand->raised_by_id === $request->user()->id
+            || $request->user()->approval_tier > 0,
+            403,
+            'You can only open demand forms you raised, or ones that come to you to decide.'
+        );
+
         $demand->load(['raisedBy', 'lines.itemType', 'approvals.actor', 'orders.vendor', 'orders.receipt.receivedBy', 'orders.bills']);
         $tiers = ApprovalTier::orderBy('tier_no')->get();
         $school = app(TenantContext::class)->current();
@@ -47,6 +55,17 @@ class DocumentController extends Controller
 
     public function order(PurchaseOrder $order, Request $request): Response
     {
+        $demand = $order->demand;
+        abort_unless(
+            $request->user()->seesEverything()
+            || $order->ordered_by_id === $request->user()->id
+            || ($demand && $demand->raised_by_id === $request->user()->id)
+            || $request->user()->can('receive-goods')
+            || $request->user()->approval_tier > 0,
+            403,
+            'You are not authorized to view this purchase order.'
+        );
+
         $order->load(['orderedBy', 'vendor', 'demand.lines.itemType', 'demand.raisedBy', 'receipt.receivedBy', 'receipt.lines', 'bills']);
         $school = app(TenantContext::class)->current();
         $schoolName = $school?->name ?? config('prativa.school_name', 'Prativa Secondary School');
@@ -69,6 +88,14 @@ class DocumentController extends Controller
 
     public function pettyCash(PettyCashToken $token, Request $request): Response
     {
+        abort_unless(
+            $request->user()->can('handle-accounts')
+            || $token->issued_by_id === $request->user()->id
+            || $token->paid_by_id === $request->user()->id,
+            403,
+            'You are not authorized to view this petty cash token.'
+        );
+
         $token->load(['issuedBy', 'paidBy']);
         $school = app(TenantContext::class)->current();
         $schoolName = $school?->name ?? config('prativa.school_name', 'Prativa Secondary School');
@@ -91,6 +118,8 @@ class DocumentController extends Controller
 
     public function bills(Request $request): Response
     {
+        abort_unless($request->user()->can('handle-accounts'), 403, 'You are not authorized to view the bills register.');
+
         $status = $request->query('status');
         $query = Bill::with(['vendor', 'enteredBy', 'clearedBy', 'purchaseOrder'])
             ->orderByDesc('bill_date')

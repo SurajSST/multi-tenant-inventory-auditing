@@ -23,6 +23,11 @@ class Queue extends Component
 
     public string $minuteRef = '';
 
+    public function mount(): void
+    {
+        abort_unless(auth()->user()->approval_tier > 0 || auth()->user()->can('approve-demands'), 403, 'You do not have pending approvals.');
+    }
+
     public function open(string $demandId, string $action): void
     {
         $this->decidingId = $demandId;

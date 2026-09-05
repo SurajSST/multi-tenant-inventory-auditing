@@ -46,10 +46,18 @@ class Index extends Component
 
     public function render(): View
     {
+        $user = auth()->user();
+        $canViewAll = $user->canViewAllAuditTrail();
+
+        if (! $canViewAll) {
+            $this->actorId = $user->id;
+        }
+
         $search = $this->search;
 
         $entries = AuditLog::with(['actor', 'actor.currentMembership'])
-            ->when($this->actorId, fn ($q) => $q->where('actor_id', $this->actorId))
+            ->when(! $canViewAll, fn ($q) => $q->where('actor_id', $user->id))
+            ->when($canViewAll && $this->actorId, fn ($q) => $q->where('actor_id', $this->actorId))
             ->when($this->entity, fn ($q) => $q->where('entity', $this->entity))
             ->when($search, fn ($q) => $q->where(function ($w) use ($search) {
                 $w->where('detail', 'like', '%'.$search.'%')
@@ -63,15 +71,18 @@ class Index extends Component
 
         return view('livewire.audit-trail.index', [
             'entries' => $entries,
-            // People posted to THIS school. users is deliberately global, so an
-            // unfiltered list here would name every other school's staff in the
-            // filter dropdown — a small leak, but a leak.
-            'actors' => User::query()
-                ->whereHas('memberships', fn ($q) => $q->where('tenant_id', app(TenantContext::class)->idOrFail()))
-                ->with('currentMembership')
-                ->orderBy('full_name')
-                ->get(['id', 'full_name']),
-            'entities' => AuditLog::distinct()->orderBy('entity')->pluck('entity'),
-        ])->title('Audit Trail');
+            'canViewAll' => $canViewAll,
+            // People posted to THIS school. Only higher tiers get the chooser.
+            'actors' => $canViewAll
+                ? User::query()
+                    ->whereHas('memberships', fn ($q) => $q->where('tenant_id', app(TenantContext::class)->idOrFail()))
+                    ->with('currentMembership')
+                    ->orderBy('full_name')
+                    ->get(['id', 'full_name'])
+                : collect([$user]),
+            'entities' => ($canViewAll ? AuditLog::distinct() : AuditLog::where('actor_id', $user->id)->distinct())
+                ->orderBy('entity')
+                ->pluck('entity'),
+        ])->title($canViewAll ? 'Audit Trail' : 'My Activity Trail');
     }
 }

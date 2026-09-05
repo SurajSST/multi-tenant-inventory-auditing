@@ -48,11 +48,9 @@ class ExportsTest extends TestCase
         $this->assertIsXlsx($this->download('/export/audit-trail'));
     }
 
-    public function test_a_teacher_cannot_export_the_audit_trail(): void
+    public function test_a_teacher_can_export_their_own_activity_trail(): void
     {
-        $this->actingAs($this->staff('p.karki@prativa.edu.np'))
-            ->get('/export/audit-trail')
-            ->assertForbidden();
+        $this->assertIsXlsx($this->download('/export/audit-trail', 'p.karki@prativa.edu.np'));
     }
 
     public function test_a_teacher_cannot_export_the_petty_cash_register(): void

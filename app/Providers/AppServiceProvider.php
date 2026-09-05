@@ -57,7 +57,8 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('manage-setup', $allowOrPlatform(Role::SUPER_ADMIN));
         Gate::define('manage-staff', $allowOrPlatform(Role::SUPER_ADMIN));
-        Gate::define('view-audit-trail', $allowOrPlatform(Role::SUPER_ADMIN, Role::CHAIRMAN, Role::ACCOUNTS));
+        Gate::define('view-all-audit-trail', fn (User $user) => $user->canViewAllAuditTrail());
+        Gate::define('view-audit-trail', fn (User $user) => $user->isPlatformOwner() || $user->activeMembership() !== null);
 
         // Taking part in the workflow: a school's own people, and only them.
         Gate::define('raise-demands', $allow(Role::INITIATOR, Role::SUPER_ADMIN));

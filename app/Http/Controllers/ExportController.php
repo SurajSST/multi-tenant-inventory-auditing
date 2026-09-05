@@ -61,10 +61,18 @@ class ExportController extends Controller
     {
         abort_unless($request->user()->can('view-audit-trail'), 403);
 
-        [$from, $to] = $this->period($request);
-        $this->log('audit trail');
+        $user = $request->user();
+        $canViewAll = $user->canViewAllAuditTrail();
 
-        return (new AuditTrailExport($this->settings, $from, $to))->download();
+        [$from, $to] = $this->period($request);
+        $this->log($canViewAll ? 'audit trail' : 'personal activity trail');
+
+        return (new AuditTrailExport(
+            $this->settings,
+            $from,
+            $to,
+            $canViewAll ? null : $user->id
+        ))->download();
     }
 
     /** @return array{0: string|null, 1: string|null} */

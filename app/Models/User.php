@@ -212,6 +212,17 @@ class User extends Authenticatable
         return $this->isPlatformOwner() || $this->hasAnyRole(Role::seesEverything());
     }
 
+    /**
+     * Governance leadership who may inspect the entire school's audit trail.
+     * Normal staff (accounts, teachers, storekeepers, etc.) may only inspect their own actions.
+     */
+    public function canViewAllAuditTrail(): bool
+    {
+        return $this->isPlatformOwner()
+            || $this->hasAnyRole([Role::SUPER_ADMIN, Role::CHAIRMAN])
+            || $this->approval_tier >= 3;
+    }
+
     /** Blocks this auditor may count in at the active school. Empty means all. */
     public function scopedLocationIds(): array
     {

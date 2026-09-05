@@ -1,25 +1,29 @@
 <div>
-    <x-page-header title="Audit Trail"
-                   subtitle="Every action in the system, attributed and timestamped. The database refuses UPDATE and DELETE on this table, so nothing here has ever been edited or removed.">
+    <x-page-header :title="$canViewAll ? 'Audit Trail' : 'My Activity Trail'"
+                   :subtitle="$canViewAll
+                       ? 'Every action in the system, attributed and timestamped. The database refuses UPDATE and DELETE on this table, so nothing here has ever been edited or removed.'
+                       : 'Your personal activity and audit trail across the system, attributed and timestamped.'">
         <x-slot:actions>
             <x-button variant="secondary" href="{{ route('export.audit-trail') }}">Export to Excel</x-button>
         </x-slot:actions>
     </x-page-header>
 
     <x-card class="mb-5">
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="grid gap-4 sm:grid-cols-2 {{ $canViewAll ? 'lg:grid-cols-5' : 'lg:grid-cols-4' }}">
             <x-field label="Search" for="search">
                 <x-input id="search" wire:model.live.debounce.300ms="search" placeholder="Reference, name, anything" />
             </x-field>
 
-            <x-field label="Who" for="actorId">
-                <x-select id="actorId" wire:model.live="actorId">
-                    <option value="">Anyone</option>
-                    @foreach ($actors as $actor)
-                        <option value="{{ $actor->id }}">{{ $actor->full_name }}</option>
-                    @endforeach
-                </x-select>
-            </x-field>
+            @if ($canViewAll)
+                <x-field label="Who" for="actorId">
+                    <x-select id="actorId" wire:model.live="actorId">
+                        <option value="">Anyone</option>
+                        @foreach ($actors as $actor)
+                            <option value="{{ $actor->id }}">{{ $actor->full_name }}</option>
+                        @endforeach
+                    </x-select>
+                </x-field>
+            @endif
 
             <x-field label="What" for="entity">
                 <x-select id="entity" wire:model.live="entity">
