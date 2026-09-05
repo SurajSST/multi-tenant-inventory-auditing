@@ -70,7 +70,7 @@ class NewSchoolSeeder extends Seeder
                 'full_name' => $name,
                 'password' => Hash::make(config('prativa.seed_password')),
                 'is_active' => true,
-                'must_reset_password' => true,
+                'must_reset_password' => false,
             ],
         );
 
