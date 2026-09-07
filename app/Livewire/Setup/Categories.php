@@ -10,6 +10,8 @@ use Livewire\Component;
 
 class Categories extends Component
 {
+    public string $search = '';
+
     public string $name = '';
 
     public string $code = '';
@@ -62,7 +64,10 @@ class Categories extends Component
                 .$category->name.' ('.$category->code.')',
         );
 
-        session()->flash('status', $category->name.' saved.');
+        $msg = $category->name.' saved.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: $this->editingId ? 'Category Updated' : 'Category Created');
+
         $this->cancel();
     }
 
@@ -89,7 +94,9 @@ class Categories extends Component
         );
 
         $this->newSub[$categoryId] = '';
-        session()->flash('status', $name.' added.');
+        $msg = $name.' added.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: 'Subcategory Added');
     }
 
     /**
@@ -109,7 +116,9 @@ class Categories extends Component
             detail: $category->name.' was '.($category->is_active ? 'reactivated' : 'retired'),
         );
 
-        session()->flash('status', $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.');
+        $msg = $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $category->is_active ? 'ok' : 'warn', title: 'Category Status');
     }
 
     public function render(): View
@@ -117,6 +126,14 @@ class Categories extends Component
         return view('livewire.setup.categories', [
             'categories' => Category::with('subcategories')
                 ->withCount('itemTypes')
+                ->when($this->search, function ($q, $search) {
+                    $search = trim($search);
+                    $q->where(function ($sub) use ($search) {
+                        $sub->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%")
+                            ->orWhereHas('subcategories', fn ($sc) => $sc->where('name', 'like', "%{$search}%"));
+                    });
+                })
                 ->orderBy('sort_order')
                 ->get(),
         ])->title('Categories');

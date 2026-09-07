@@ -209,6 +209,12 @@
     @endif
 
     {{-- Schools Table --}}
+    <div class="mb-4 flex items-center justify-between gap-4">
+        <div class="w-full max-w-sm">
+            <x-input type="search" wire:model.live.debounce.300ms="search" placeholder="Search schools by name, slug, address..." />
+        </div>
+    </div>
+
     <x-card :flush="true" title="Managed Schools ({{ $schools->count() }})">
         <div class="overflow-x-auto">
             <table class="min-w-full text-sm">

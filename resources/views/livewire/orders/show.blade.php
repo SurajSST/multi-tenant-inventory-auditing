@@ -12,10 +12,13 @@
 
     <x-page-header :title="$order->ref"
                    :copyable="$order->ref"
-                   :subtitle="$order->vendor->name . ' · against ' . $order->demand->ref">
+                   :subtitle="($order->vendor?->name ?? 'Vendor') . ($order->demand ? ' · against ' . $order->demand->ref : '')">
         <x-slot:actions>
             @can('receive-goods')
-                @if (! $receipt && $order->ordered_by_id !== auth()->id())
+                @if ($order->receipts->isNotEmpty())
+                    <x-button variant="secondary" href="{{ route('orders.return', $order) }}" wire:navigate>Return goods</x-button>
+                @endif
+                @if (! $order->isReceived() && $order->ordered_by_id !== auth()->id())
                     <x-button href="{{ route('orders.receive', $order) }}" wire:navigate>Verify receipt</x-button>
                 @endif
             @endcan
@@ -38,10 +41,10 @@
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
         <x-stat label="Status" :value="$order->status->label()"
                 :tone="$order->status === \App\Enums\OrderStatus::RECEIVED ? 'emerald' : 'amber'" />
-        <x-stat label="Approved" :value="\App\Support\Money::npr($order->demand->total_amount)" />
+        <x-stat label="Approved" :value="\App\Support\Money::npr($order->demand?->total_amount ?? $order->order_amount)" />
         <x-stat label="Ordered" :value="\App\Support\Money::npr($order->order_amount)"
-                :tone="\App\Support\Money::gt($order->order_amount, $order->demand->total_amount) ? 'amber' : 'slate'"
-                :note="\App\Support\Money::gt($order->order_amount, $order->demand->total_amount)
+                :tone="$order->demand && \App\Support\Money::gt($order->order_amount, $order->demand->total_amount) ? 'amber' : 'slate'"
+                :note="$order->demand && \App\Support\Money::gt($order->order_amount, $order->demand->total_amount)
                     ? \App\Support\Money::npr(\App\Support\Money::sub($order->order_amount, $order->demand->total_amount)) . ' above approval'
                     : 'within the approval'" />
         <x-stat label="Billed" :value="$bill ? \App\Support\Money::npr($bill->bill_amount) : '—'"
@@ -66,19 +69,27 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-white/5">
-                            @foreach ($order->demand->lines as $line)
-                                @php $rl = $receipt?->lines->firstWhere('demand_line_id', $line->id) @endphp
+                            @php
+                                $displayLines = $order->lines->isNotEmpty() ? $order->lines : ($order->demand?->lines ?? collect());
+                            @endphp
+                            @foreach ($displayLines as $line)
+                                @php
+                                    $itemName = $line->description ?? $line->item_name ?? 'Item';
+                                    $orderedQty = $line->quantity_ordered ?? $line->quantity;
+                                    $rl = $receipt?->lines->firstWhere('purchase_order_line_id', $line->id) ?? $receipt?->lines->firstWhere('demand_line_id', $line->id);
+                                    $receivedQty = $rl?->qty_received;
+                                @endphp
                                 <tr>
                                     <td class="px-5 py-2.5 text-slate-900 dark:text-slate-100">
-                                        {{ $line->item_name }}
-                                        @if ($line->specification)
+                                        {{ $itemName }}
+                                        @if ($line->specification ?? false)
                                             <span class="block text-xs text-slate-500 dark:text-slate-500">{{ $line->specification }}</span>
                                         @endif
                                     </td>
-                                    <td class="tnum px-4 py-2.5 text-right text-slate-600 dark:text-slate-400">{{ $line->quantity }}</td>
+                                    <td class="tnum px-4 py-2.5 text-right text-slate-600 dark:text-slate-400">{{ $orderedQty }}</td>
                                     @if ($receipt)
                                         <td class="tnum px-4 py-2.5 text-right font-medium {{ $rl && $rl->isShort() ? 'text-amber-700 dark:text-amber-400' : 'text-slate-900 dark:text-slate-100' }}">
-                                            {{ $rl?->qty_received ?? '—' }}
+                                            {{ $receivedQty ?? '—' }}
                                         </td>
                                         <td class="px-5 py-2.5 text-xs text-slate-500 dark:text-slate-500">{{ $rl?->remark }}</td>
                                     @endif

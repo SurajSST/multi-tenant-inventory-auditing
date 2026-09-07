@@ -15,6 +15,8 @@ use Livewire\Component;
  */
 class Queue extends Component
 {
+    public string $search = '';
+
     public ?string $decidingId = null;
 
     public string $action = '';
@@ -40,7 +42,19 @@ class Queue extends Component
     public function updatedSelectAll(bool $value, DemandService $demands): void
     {
         if ($value) {
-            $this->selected = $demands->myQueue(auth()->user())
+            $queue = $demands->myQueue(auth()->user());
+            if ($this->search) {
+                $needle = strtolower(trim($this->search));
+                $queue = $queue->filter(function ($item) use ($needle) {
+                    return str_contains(strtolower($item->ref ?? ''), $needle)
+                        || str_contains(strtolower($item->department ?? ''), $needle)
+                        || str_contains(strtolower($item->justification ?? ''), $needle)
+                        || str_contains(strtolower($item->raisedBy?->full_name ?? ''), $needle)
+                        || $item->lines->contains(fn ($l) => str_contains(strtolower($l->item_name ?? ''), $needle));
+                });
+            }
+
+            $this->selected = $queue
                 ->pluck('id')
                 ->map(fn ($id) => (string) $id)
                 ->all();
@@ -95,9 +109,13 @@ class Queue extends Component
         $this->closeBulkModal();
 
         if ($errors) {
-            session()->flash('status', "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors)));
+            $msg = "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors));
+            session()->flash('status', $msg);
+            $this->dispatch('toast', message: $msg, tone: 'warn', title: 'Bulk Approval Warning');
         } else {
-            session()->flash('status', "Successfully approved {$approvedCount} demand form(s).");
+            $msg = "Successfully approved {$approvedCount} demand form(s).";
+            session()->flash('status', $msg);
+            $this->dispatch('toast', message: $msg, tone: 'ok', title: 'Bulk Approved');
         }
     }
 
@@ -129,22 +147,37 @@ class Queue extends Component
             );
         } catch (AuthorizationException $e) {
             $this->addError('decision', $e->getMessage());
+            $this->dispatch('toast', message: $e->getMessage(), tone: 'danger', title: 'Approval Refused');
 
             return;
         }
 
         $this->close();
 
-        session()->flash('status', $action === ApprovalAction::APPROVE
+        $msg = $action === ApprovalAction::APPROVE
             ? "{$demand->ref} approved. ".($demand->current_tier
                 ? "It now sits with tier {$demand->current_tier}."
                 : 'It is fully approved and ready for an order.')
-            : "{$demand->ref} rejected. The person who raised it can see your reason.");
+            : "{$demand->ref} rejected. The person who raised it can see your reason.";
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $action === ApprovalAction::APPROVE ? 'ok' : 'warn', title: $action === ApprovalAction::APPROVE ? 'Approved' : 'Rejected');
     }
 
     public function render(DemandService $demands, SettingService $settings): View
     {
         $queue = $demands->myQueue(auth()->user());
+
+        if ($this->search) {
+            $needle = strtolower(trim($this->search));
+            $queue = $queue->filter(function ($item) use ($needle) {
+                return str_contains(strtolower($item->ref ?? ''), $needle)
+                    || str_contains(strtolower($item->department ?? ''), $needle)
+                    || str_contains(strtolower($item->justification ?? ''), $needle)
+                    || str_contains(strtolower($item->raisedBy?->full_name ?? ''), $needle)
+                    || $item->lines->contains(fn ($l) => str_contains(strtolower($l->item_name ?? ''), $needle));
+            })->values();
+        }
 
         return view('livewire.demands.queue', [
             'queue' => $queue,

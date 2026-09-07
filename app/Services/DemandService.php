@@ -138,12 +138,22 @@ class DemandService
      * Non-privileged users see only the forms they raised. Super Admin,
      * Accounts, Chairman and the Purchase Officer see all of them.
      */
-    public function list(User $user, ?DemandStatus $status = null, bool $mineOnly = false, ?string $department = null, int $perPage = 25): LengthAwarePaginator
+    public function list(User $user, ?DemandStatus $status = null, bool $mineOnly = false, ?string $department = null, ?string $search = null, int $perPage = 25): LengthAwarePaginator
     {
         return DemandForm::query()
             ->when($status, fn ($q) => $q->where('status', $status))
             ->when($department, fn ($q) => $q->where('department', $department))
             ->when($mineOnly || ! $user->seesEverything(), fn ($q) => $q->where('raised_by_id', $user->id))
+            ->when($search, function ($q, $search) {
+                $search = trim($search);
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('ref', 'like', "%{$search}%")
+                        ->orWhere('department', 'like', "%{$search}%")
+                        ->orWhere('justification', 'like', "%{$search}%")
+                        ->orWhereHas('raisedBy', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
+                        ->orWhereHas('lines', fn ($l) => $l->where('item_name', 'like', "%{$search}%"));
+                });
+            })
             // The list shows a line count, not the lines, so it counts them in
             // SQL rather than hydrating every item on every form on the page.
             ->withCount('lines')
@@ -342,9 +352,15 @@ class DemandService
                 );
             }
 
-            if ($demand->status !== DemandStatus::PENDING) {
+            if ($demand->status !== DemandStatus::PENDING && $demand->status !== DemandStatus::APPROVED) {
                 throw ValidationException::withMessages([
-                    'demand' => 'Only a pending form can be withdrawn.',
+                    'demand' => 'Only a pending or unfulfilled approved form can be withdrawn.',
+                ]);
+            }
+
+            if ($demand->status === DemandStatus::APPROVED && $demand->orders()->exists()) {
+                throw ValidationException::withMessages([
+                    'demand' => 'Cannot withdraw an approved demand that already has a purchase order placed against it.',
                 ]);
             }
 

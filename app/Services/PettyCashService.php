@@ -113,10 +113,22 @@ class PettyCashService
         });
     }
 
-    public function list(?TokenStatus $status = null, int $perPage = 25): LengthAwarePaginator
+    public function list(?TokenStatus $status = null, ?string $search = null, int $perPage = 25): LengthAwarePaginator
     {
         return PettyCashToken::query()
             ->when($status, fn ($q) => $q->where('status', $status))
+            ->when($search, function ($q, $search) {
+                $search = trim($search);
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('serial', 'like', "%{$search}%")
+                        ->orWhere('bill_no', 'like', "%{$search}%")
+                        ->orWhere('vendor_name', 'like', "%{$search}%")
+                        ->orWhere('claimant_name', 'like', "%{$search}%")
+                        ->orWhere('purpose', 'like', "%{$search}%")
+                        ->orWhereHas('issuedBy', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
+                        ->orWhereHas('paidBy', fn ($u) => $u->where('full_name', 'like', "%{$search}%"));
+                });
+            })
             ->with(['issuedBy:id,full_name', 'paidBy:id,full_name'])
             ->orderByDesc('issued_at')
             ->paginate($perPage);

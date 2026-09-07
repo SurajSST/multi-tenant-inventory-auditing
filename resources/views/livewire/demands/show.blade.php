@@ -17,7 +17,7 @@
 
     <x-page-header :title="$demand->ref"
                    :copyable="$demand->ref"
-                   :subtitle="$demand->department . ' · raised by ' . $demand->raisedBy->full_name . ', ' . $demand->raisedBy->designation">
+                   :subtitle="$demand->department . ' · raised by ' . ($demand->raisedBy?->full_name ?? 'Staff') . ', ' . ($demand->raisedBy?->designation ?? 'Staff')">
         <x-slot:actions>
             <x-button variant="secondary" href="{{ route('demands.print', ['demand' => $demand, 'autoprint' => 1]) }}" target="_blank">
                 <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -58,7 +58,7 @@
                     </div>
                     <div>
                         <p class="text-xs font-semibold text-slate-900 dark:text-white">Raised</p>
-                        <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $demand->raisedBy->full_name }}</p>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $demand->raisedBy?->full_name ?? 'Staff' }}</p>
                     </div>
                 </div>
 
@@ -149,7 +149,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-semibold text-slate-900 dark:text-white">Received</p>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $receipt->receivedBy->full_name }}</p>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400">{{ $receipt->receivedBy?->full_name ?? 'Receiving Officer' }}</p>
                         </div>
                     @elseif ($order)
                         <div class="flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-amber-500 bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
@@ -296,7 +296,7 @@
                             The bill differs from the order by
                             <strong><x-money :amount="\App\Support\Money::abs($bill->variance_amount)" /></strong>.
                             @if ($bill->match_status === \App\Enums\MatchStatus::VARIANCE_CLEARED)
-                                {{ $bill->clearedBy->full_name }} accepted it on {{ $bill->cleared_at->format('d M Y') }}:
+                                {{ $bill->clearedBy?->full_name ?? 'Accounts' }} accepted it on {{ $bill->cleared_at?->format('d M Y') }}:
                                 “{{ $bill->variance_note }}”
                             @else
                                 It stays flagged until Accounts clears it in writing.
@@ -326,8 +326,8 @@
                                 <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $demand->created_at->format('d M Y, H:i') }}</time>
                             </div>
                             <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                                <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy->full_name }}</span>
-                                <span class="text-slate-500 dark:text-slate-400">· {{ $demand->raisedBy->designation }}</span>
+                                <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy?->full_name ?? 'Staff' }}</span>
+                                <span class="text-slate-500 dark:text-slate-400">· {{ $demand->raisedBy?->designation ?? 'Member' }}</span>
                             </div>
                         </div>
                     </li>
@@ -355,8 +355,8 @@
                                     <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $approval->acted_at->format('d M Y, H:i') }}</time>
                                 </div>
                                 <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $approval->actor->full_name }}</span>
-                                    <span class="text-slate-500 dark:text-slate-400">· {{ $approval->actor->designation }}</span>
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $approval->actor?->full_name ?? 'Approver' }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· {{ $approval->actor?->designation ?? 'Member' }}</span>
                                 </div>
                                 @if ($approval->minute_ref || $approval->reason)
                                     <div class="mt-1.5 rounded-md border border-slate-200/60 bg-slate-50/80 px-2.5 py-1 text-xs text-slate-600 dark:border-white/5 dark:bg-white/5 dark:text-slate-300">
@@ -413,8 +413,8 @@
                                     <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $order->ordered_at->format('d M Y, H:i') }}</time>
                                 </div>
                                 <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $order->orderedBy->full_name }}</span>
-                                    <span class="text-slate-500 dark:text-slate-400">· {{ $order->vendor->name }} · <x-money :amount="$order->order_amount" /></span>
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $order->orderedBy?->full_name ?? 'Purchaser' }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· {{ $order->vendor?->name ?? 'Vendor' }} · <x-money :amount="$order->order_amount" /></span>
                                 </div>
                             </div>
                         </li>
@@ -435,8 +435,8 @@
                                     <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $receipt->received_at->format('d M Y, H:i') }}</time>
                                 </div>
                                 <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $receipt->receivedBy->full_name }}</span>
-                                    <span class="text-slate-500 dark:text-slate-400">· Into {{ $receipt->location->name }} · {{ $receipt->condition->label() }}@if ($receipt->challan_no) · ch. {{ $receipt->challan_no }}@endif</span>
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $receipt->receivedBy?->full_name ?? 'Receiving Officer' }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· Into {{ $receipt->location?->name ?? 'Store' }} · {{ $receipt->condition?->label() }}@if ($receipt->challan_no) · ch. {{ $receipt->challan_no }}@endif</span>
                                 </div>
                                 @if ($receipt->discrepancy_note)
                                     <p class="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">“{{ $receipt->discrepancy_note }}”</p>
@@ -457,7 +457,7 @@
                                     <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">Pending</span>
                                 </div>
                                 <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
-                                    Somebody other than {{ $order->orderedBy->full_name }} has to verify goods arrived.
+                                    Somebody other than {{ $order->orderedBy?->full_name ?? 'Purchaser' }} has to verify goods arrived.
                                 </p>
                             </div>
                         </li>
@@ -478,8 +478,8 @@
                                     <time class="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{{ $bill->entered_at->format('d M Y, H:i') }}</time>
                                 </div>
                                 <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
-                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $bill->enteredBy->full_name }}</span>
-                                    <span class="text-slate-500 dark:text-slate-400">· <x-money :amount="$bill->bill_amount" /> · <x-badge :class="$bill->match_status->badge()">{{ $bill->match_status->label() }}</x-badge></span>
+                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $bill->enteredBy?->full_name ?? 'Accounts' }}</span>
+                                    <span class="text-slate-500 dark:text-slate-400">· <x-money :amount="$bill->bill_amount" /> · <x-badge :class="$bill->match_status?->badge()">{{ $bill->match_status?->label() }}</x-badge></span>
                                 </div>
                             </div>
                         </li>
@@ -493,9 +493,9 @@
         $demandSignatures = [
             [
                 'role' => 'Demanded By (मागकर्ता)',
-                'name' => $demand->raisedBy->full_name,
-                'designation' => $demand->raisedBy->designation,
-                'date' => $demand->created_at->format('d M Y'),
+                'name' => $demand->raisedBy?->full_name ?? 'Staff',
+                'designation' => $demand->raisedBy?->designation ?? '',
+                'date' => $demand->created_at?->format('d M Y'),
             ],
         ];
 
@@ -503,9 +503,9 @@
             foreach ($demand->approvals as $approval) {
                 $demandSignatures[] = [
                     'role' => 'Tier ' . $approval->tier_no . ' (' . $approval->action->label() . ')',
-                    'name' => $approval->actor->full_name,
-                    'designation' => $approval->actor->designation,
-                    'date' => $approval->acted_at->format('d M Y'),
+                    'name' => $approval->actor?->full_name ?? 'Approver',
+                    'designation' => $approval->actor?->designation ?? '',
+                    'date' => $approval->acted_at?->format('d M Y'),
                 ];
             }
         }

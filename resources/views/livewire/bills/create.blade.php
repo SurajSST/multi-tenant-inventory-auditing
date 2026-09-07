@@ -23,7 +23,7 @@
                 <div class="mt-5 grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-white/5">
                         <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500">Approved</p>
-                        <x-money :amount="$this->order->demand->total_amount" :bare="true" class="text-sm font-semibold text-slate-900 dark:text-slate-100" />
+                        <x-money :amount="$this->order->demand?->total_amount ?? $this->order->order_amount" :bare="true" class="text-sm font-semibold text-slate-900 dark:text-slate-100" />
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-white/5">
                         <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500">Ordered</p>
@@ -31,13 +31,84 @@
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-white/5">
                         <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500">Verified by</p>
-                        <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $this->order->receipt->receivedBy->full_name }}</p>
+                        <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $this->order->receipt?->receivedBy?->full_name ?? 'Receiving Officer' }}</p>
                     </div>
                     <div class="rounded-lg bg-slate-50 p-3 dark:bg-white/5">
                         <p class="text-[11px] uppercase tracking-wide text-slate-500 dark:text-slate-500">Vendor</p>
-                        <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $this->order->vendor->name }}</p>
+                        <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $this->order->vendor?->name ?? 'Vendor' }}</p>
                     </div>
                 </div>
+
+                @if (count($this->billLines) > 0)
+                    <div class="mt-5 rounded-lg border border-slate-200 dark:border-white/10">
+                        <div class="border-b border-slate-200 bg-slate-50 px-4 py-2.5 dark:border-white/10 dark:bg-white/5 flex items-center justify-between">
+                            <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Invoice Line Items (3-Way Matching)</p>
+                            <p class="text-xs text-slate-500">Auto-populated from verified receipts</p>
+                        </div>
+                        <div class="table-scroll">
+                            <table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-white/5">
+                                <thead>
+                                    <tr class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-white/5">
+                                        <th class="px-4 py-2 text-left">Item Description</th>
+                                        <th class="px-4 py-2 text-center">Recv Qty</th>
+                                        <th class="px-4 py-2 text-center w-28">Invoiced Qty</th>
+                                        <th class="px-4 py-2 text-right">PO Rate</th>
+                                        <th class="px-4 py-2 text-center w-36">Invoiced Rate</th>
+                                        <th class="px-4 py-2 text-right">Line Total</th>
+                                        <th class="px-4 py-2 text-center">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100 dark:divide-white/5">
+                                    @foreach ($this->billLines as $idx => $line)
+                                        @php
+                                            $qtyMatched = (int) $line['quantity'] <= (int) $line['received_qty'];
+                                            $rateMatched = \App\Support\Money::eq($line['unit_price'], $line['po_unit_price']);
+                                        @endphp
+                                        <tr class="{{ (! $qtyMatched || ! $rateMatched) ? 'bg-amber-50/50 dark:bg-amber-500/5' : '' }}">
+                                            <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
+                                                {{ $line['description'] }}
+                                            </td>
+                                            <td class="px-4 py-2 text-center text-slate-600 dark:text-slate-400 font-medium">
+                                                {{ $line['received_qty'] }}
+                                            </td>
+                                            <td class="px-4 py-2">
+                                                <x-input type="number" min="1"
+                                                         wire:model.live.debounce.300ms="billLines.{{ $idx }}.quantity"
+                                                         class="tnum text-center text-sm py-1 {{ ! $qtyMatched ? 'border-rose-400' : '' }}" />
+                                            </td>
+                                            <td class="px-4 py-2 text-right text-slate-500">
+                                                {{ \App\Support\Money::npr($line['po_unit_price']) }}
+                                            </td>
+                                            <td class="px-4 py-2">
+                                                <x-input type="number" step="0.01" min="0"
+                                                         wire:model.live.debounce.300ms="billLines.{{ $idx }}.unit_price"
+                                                         class="tnum text-right text-sm py-1 {{ ! $rateMatched ? 'border-rose-400' : '' }}" />
+                                            </td>
+                                            <td class="px-4 py-2 text-right font-medium text-slate-900 dark:text-slate-100">
+                                                {{ \App\Support\Money::npr(\App\Support\Money::mul($line['unit_price'] ?: 0, $line['quantity'] ?: 0)) }}
+                                            </td>
+                                            <td class="px-4 py-2 text-center">
+                                                @if ($qtyMatched && $rateMatched)
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                                        Matched
+                                                    </span>
+                                                @elseif (! $qtyMatched)
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-300">
+                                                        Overbilled Qty
+                                                    </span>
+                                                @else
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+                                                        Rate Variance
+                                                    </span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
             @endif
         </x-card>
 

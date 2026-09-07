@@ -14,8 +14,12 @@
                 </svg>
                 Print
             </x-button>
-            <x-button variant="secondary" href="{{ route('inventory.variance') }}" wire:navigate>Variance</x-button>
-            <x-button variant="secondary" href="{{ route('export.stock-register') }}">Export to Excel</x-button>
+            <x-button variant="secondary" wire:click="exportCsv">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.5V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Export CSV
+            </x-button>
         </x-slot:actions>
     </x-page-header>
 

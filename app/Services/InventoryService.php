@@ -359,42 +359,250 @@ class InventoryService
         });
     }
 
+    /** Transfer stock between locations with audit trail and atomic lock. */
+    public function transfer(
+        string $itemTypeId,
+        string $fromLocationId,
+        string $toLocationId,
+        int $quantity,
+        User $actor,
+        string $reason
+    ): array {
+        if ($quantity <= 0) {
+            throw ValidationException::withMessages(['quantity' => 'Transfer quantity must be greater than zero.']);
+        }
+
+        if ($fromLocationId === $toLocationId) {
+            throw ValidationException::withMessages(['to_location_id' => 'Cannot transfer to the same location.']);
+        }
+
+        return DB::transaction(function () use ($itemTypeId, $fromLocationId, $toLocationId, $quantity, $actor, $reason) {
+            $this->lockLedgerFor([$itemTypeId]);
+
+            $fromQty = $this->currentQuantity($itemTypeId, $fromLocationId);
+            if ($fromQty < $quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => "Insufficient stock in source location ({$fromQty} available, {$quantity} requested).",
+                ]);
+            }
+
+            $toQty = $this->currentQuantity($itemTypeId, $toLocationId);
+
+            $fromLocation = Location::findOrFail($fromLocationId);
+            $toLocation = Location::findOrFail($toLocationId);
+            $item = ItemType::findOrFail($itemTypeId);
+
+            $entryOut = StockCountEntry::create([
+                'item_type_id' => $itemTypeId,
+                'location_id' => $fromLocationId,
+                'quantity' => $fromQty - $quantity,
+                'previous_qty' => $fromQty,
+                'source' => CountSource::ADJUSTMENT,
+                'note' => "Transferred to {$toLocation->name}: {$reason}",
+                'counted_by_id' => $actor->id,
+            ]);
+
+            $entryIn = StockCountEntry::create([
+                'item_type_id' => $itemTypeId,
+                'location_id' => $toLocationId,
+                'quantity' => $toQty + $quantity,
+                'previous_qty' => $toQty,
+                'source' => CountSource::ADJUSTMENT,
+                'note' => "Transferred from {$fromLocation->name}: {$reason}",
+                'counted_by_id' => $actor->id,
+            ]);
+
+            $this->audit->record(
+                action: 'STOCK_TRANSFERRED',
+                entity: 'stock_count_entries',
+                entityId: $entryOut->id,
+                detail: sprintf(
+                    '%d units of %s transferred from %s to %s by %s: %s',
+                    $quantity,
+                    $item->name,
+                    $fromLocation->name,
+                    $toLocation->name,
+                    $actor->full_name,
+                    $reason
+                ),
+                actor: $actor,
+                after: [
+                    'item' => $item->name,
+                    'quantity' => $quantity,
+                    'from' => $fromLocation->name,
+                    'to' => $toLocation->name,
+                ]
+            );
+
+            return ['out' => $entryOut, 'in' => $entryIn];
+        });
+    }
+
+    /** Issue stock for internal consumption or departmental usage. */
+    public function issueStock(
+        string $itemTypeId,
+        string $locationId,
+        int $quantity,
+        User $actor,
+        string $recipient,
+        string $purpose
+    ): StockCountEntry {
+        if ($quantity <= 0) {
+            throw ValidationException::withMessages(['quantity' => 'Issue quantity must be greater than zero.']);
+        }
+
+        return DB::transaction(function () use ($itemTypeId, $locationId, $quantity, $actor, $recipient, $purpose) {
+            $this->lockLedgerFor([$itemTypeId]);
+
+            $current = $this->currentQuantity($itemTypeId, $locationId);
+            if ($current < $quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => "Insufficient stock to issue ({$current} available, {$quantity} requested).",
+                ]);
+            }
+
+            $location = Location::findOrFail($locationId);
+            $item = ItemType::findOrFail($itemTypeId);
+
+            $entry = StockCountEntry::create([
+                'item_type_id' => $itemTypeId,
+                'location_id' => $locationId,
+                'quantity' => $current - $quantity,
+                'previous_qty' => $current,
+                'source' => CountSource::ADJUSTMENT,
+                'note' => "Issued to {$recipient} for {$purpose}",
+                'counted_by_id' => $actor->id,
+            ]);
+
+            $this->audit->record(
+                action: 'STOCK_ISSUED',
+                entity: 'stock_count_entries',
+                entityId: $entry->id,
+                detail: sprintf(
+                    '%d units of %s issued from %s to %s for %s by %s',
+                    $quantity,
+                    $item->name,
+                    $location->name,
+                    $recipient,
+                    $purpose,
+                    $actor->full_name
+                ),
+                actor: $actor,
+                after: [
+                    'item' => $item->name,
+                    'quantity' => $quantity,
+                    'location' => $location->name,
+                    'recipient' => $recipient,
+                ]
+            );
+
+            return $entry;
+        });
+    }
+
     /**
-     * The difference between what the school bought through this system and
-     * what is physically there.
+     * Deduct stock when goods are returned to a vendor.
+     */
+    public function postReturn(
+        string $itemTypeId,
+        string $locationId,
+        int $quantity,
+        User $actor,
+        string $note = 'Returned to supplier',
+    ): StockCountEntry {
+        if ($quantity <= 0) {
+            throw ValidationException::withMessages(['quantity' => 'Return quantity must be greater than zero.']);
+        }
+
+        return DB::transaction(function () use ($itemTypeId, $locationId, $quantity, $actor, $note) {
+            $this->lockLedgerFor([$itemTypeId]);
+
+            $current = $this->currentQuantity($itemTypeId, $locationId);
+            if ($current < $quantity) {
+                throw ValidationException::withMessages([
+                    'quantity' => "Insufficient stock to return ({$current} available, {$quantity} requested).",
+                ]);
+            }
+
+            $location = Location::findOrFail($locationId);
+            $item = ItemType::findOrFail($itemTypeId);
+
+            $entry = StockCountEntry::create([
+                'item_type_id' => $itemTypeId,
+                'location_id' => $locationId,
+                'quantity' => $current - $quantity,
+                'previous_qty' => $current,
+                'source' => CountSource::ADJUSTMENT,
+                'note' => $note,
+                'counted_by_id' => $actor->id,
+            ]);
+
+            $this->audit->record(
+                action: 'STOCK_RETURNED_TO_SUPPLIER',
+                entity: 'stock_count_entries',
+                entityId: $entry->id,
+                detail: sprintf(
+                    '%d units of %s returned from %s: %s by %s',
+                    $quantity,
+                    $item->name,
+                    $location->name,
+                    $note,
+                    $actor->full_name
+                ),
+                actor: $actor,
+                after: [
+                    'item' => $item->name,
+                    'quantity' => $quantity,
+                    'location' => $location->name,
+                    'note' => $note,
+                ]
+            );
+
+            return $entry;
+        });
+    }
+
+    /**
+     * The difference between what the school bought or recorded as opening balance
+     * and what is physically counted.
      */
     public function variance(?string $locationId = null): Collection
     {
         $sql = '
             SELECT it.name AS item, it.code_prefix, l.name AS block, l.id AS location_id,
-                   COALESCE(r.purchased, 0) AS purchased_through_system,
+                   COALESCE(r.total_inbound, 0) AS purchased_through_system,
                    COALESCE(cs.quantity, 0) AS physically_counted,
-                   COALESCE(cs.quantity, 0) - COALESCE(r.purchased, 0) AS variance,
+                   COALESCE(cs.quantity, 0) - COALESCE(r.total_inbound, 0) AS variance,
                    cs.last_counted_at
             FROM item_types it
             CROSS JOIN locations l
             LEFT JOIN (
-              SELECT dl.item_type_id, gr.location_id, SUM(grl.qty_received) AS purchased
-              FROM goods_receipt_lines grl
-              JOIN goods_receipts gr ON gr.id = grl.receipt_id
-              JOIN demand_lines dl   ON dl.id = grl.demand_line_id
-              WHERE dl.item_type_id IS NOT NULL AND grl.tenant_id = ?
-              GROUP BY dl.item_type_id, gr.location_id
+              SELECT item_type_id, location_id, SUM(qty_in) AS total_inbound
+              FROM (
+                SELECT dl.item_type_id, gr.location_id, SUM(grl.qty_received) AS qty_in
+                FROM goods_receipt_lines grl
+                JOIN goods_receipts gr ON gr.id = grl.receipt_id
+                JOIN demand_lines dl   ON dl.id = grl.demand_line_id
+                WHERE dl.item_type_id IS NOT NULL AND grl.tenant_id = ?
+                GROUP BY dl.item_type_id, gr.location_id
+                UNION ALL
+                SELECT sce.item_type_id, sce.location_id, sce.quantity AS qty_in
+                FROM stock_count_entries sce
+                WHERE sce.source = "OPENING_BALANCE" AND sce.tenant_id = ?
+              ) inbounds
+              GROUP BY item_type_id, location_id
             ) r ON r.item_type_id = it.id AND r.location_id = l.id
             LEFT JOIN v_current_stock cs ON cs.item_type_id = it.id AND cs.location_id = l.id
             WHERE it.is_active = 1 AND l.is_active = 1
-              -- Both sides of the cross join have to be the same school. Without
-              -- this the report tells one school it is missing stock that in fact
-              -- belongs to a different school entirely.
               AND it.tenant_id = ? AND l.tenant_id = it.tenant_id
-              AND (COALESCE(r.purchased, 0) > 0 OR COALESCE(cs.quantity, 0) > 0)
+              AND (COALESCE(r.total_inbound, 0) > 0 OR COALESCE(cs.quantity, 0) > 0)
               AND (? IS NULL OR l.id = ?)
-            ORDER BY ABS(COALESCE(cs.quantity, 0) - COALESCE(r.purchased, 0)) DESC, it.name
+            ORDER BY ABS(COALESCE(cs.quantity, 0) - COALESCE(r.total_inbound, 0)) DESC, it.name
         ';
 
         $tenantId = $this->tenantId();
 
-        return collect(DB::select($sql, [$tenantId, $tenantId, $locationId, $locationId]));
+        return collect(DB::select($sql, [$tenantId, $tenantId, $tenantId, $locationId, $locationId]));
     }
 
     /** Full history for one item type in one block, newest first. */

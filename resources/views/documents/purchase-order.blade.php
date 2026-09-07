@@ -237,7 +237,9 @@
             <td style="text-align: right; vertical-align: middle; font-size: 10.5px;">
                 <strong>PO Ref:</strong> {{ $order->ref }}<br>
                 <strong>Date:</strong> {{ $order->ordered_at->format('d M Y') }}<br>
-                <strong>Demand Ref:</strong> {{ $order->demand->ref }}
+                @if ($order->demand)
+                    <strong>Demand Ref:</strong> {{ $order->demand->ref }}
+                @endif
             </td>
         </tr>
     </table>
@@ -262,7 +264,7 @@
         </tr>
         <tr>
             <td class="meta-label">Against Demand:</td>
-            <td class="meta-val">{{ $order->demand->ref }} ({{ $order->demand->department }})</td>
+            <td class="meta-val">{{ $order->demand ? $order->demand->ref . ' (' . $order->demand->department . ')' : 'Direct Institutional Order' }}</td>
             <td class="meta-label">Order Value:</td>
             <td class="meta-val"><strong>{{ \App\Support\Money::npr($order->order_amount) }}</strong></td>
         </tr>
@@ -291,20 +293,28 @@
             </tr>
         </thead>
         <tbody>
-            @foreach ($order->demand->lines as $idx => $line)
-                @php $rl = $order->receipt?->lines->firstWhere('demand_line_id', $line->id) @endphp
+            @php
+                $displayLines = $order->lines->isNotEmpty() ? $order->lines : ($order->demand?->lines ?? collect());
+            @endphp
+            @foreach ($displayLines as $idx => $line)
+                @php
+                    $itemName = $line->description ?? $line->item_name ?? 'Item';
+                    $orderedQty = $line->quantity_ordered ?? $line->quantity;
+                    $itemCode = $line->itemType?->code_prefix ?? ($line->demandLine?->itemType?->code_prefix ?? '—');
+                    $rl = $order->receipt?->lines->firstWhere('purchase_order_line_id', $line->id) ?? $order->receipt?->lines->firstWhere('demand_line_id', $line->id);
+                @endphp
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
                     <td>
-                        <strong>{{ $line->item_name }}</strong>
-                        @if ($line->specification)
+                        <strong>{{ $itemName }}</strong>
+                        @if ($line->specification ?? false)
                             <div style="font-size: 9.5px; color: #475569;">Spec: {{ $line->specification }}</div>
                         @endif
                     </td>
                     <td class="text-center" style="font-family: monospace; font-size: 9.5px;">
-                        {{ $line->itemType?->code_prefix ?? '—' }}
+                        {{ $itemCode }}
                     </td>
-                    <td class="text-right"><strong>{{ $line->quantity }}</strong></td>
+                    <td class="text-right"><strong>{{ $orderedQty }}</strong></td>
                     @if ($order->receipt)
                         <td class="text-right" style="{{ $rl && $rl->isShort() ? 'color: #b45309; font-weight: bold;' : '' }}">
                             {{ $rl?->qty_received ?? '—' }}
@@ -330,8 +340,8 @@
     @if ($order->receipt)
         <div class="section-title">Delivery & Verification Log (सामग्री दाखिला विवरण)</div>
         <div class="box">
-            <strong>Verified By:</strong> {{ $order->receipt->receivedBy->full_name }} ({{ $order->receipt->receivedBy->designation }})<br>
-            <strong>Date Received:</strong> {{ $order->receipt->received_at->format('d M Y, H:i') }} · <strong>Location:</strong> {{ $order->receipt->location->name }} · <strong>Condition:</strong> {{ $order->receipt->condition->label() }}<br>
+            <strong>Verified By:</strong> {{ $order->receipt->receivedBy?->full_name ?? 'Officer' }} ({{ $order->receipt->receivedBy?->designation ?? 'Receiving' }})<br>
+            <strong>Date Received:</strong> {{ $order->receipt->received_at?->format('d M Y, H:i') }} · <strong>Location:</strong> {{ $order->receipt->location?->name ?? 'Store' }} · <strong>Condition:</strong> {{ $order->receipt->condition?->label() }}<br>
             @if ($order->receipt->challan_no)
                 <strong>Vendor Challan No:</strong> {{ $order->receipt->challan_no }}<br>
             @endif
@@ -354,36 +364,38 @@
             </tr>
         </thead>
         <tbody>
+            @if ($order->demand)
+                <tr>
+                    <td class="text-center">1</td>
+                    <td>Demand Approved</td>
+                    <td>{{ $order->demand->raisedBy?->full_name ?? 'Staff' }} (Raised)</td>
+                    <td>Ref: {{ $order->demand->ref }} · Approved value: {{ \App\Support\Money::npr($order->demand->total_amount) }}</td>
+                    <td class="text-right">{{ $order->demand->closed_at ? $order->demand->closed_at->format('d M Y, H:i') : $order->demand->created_at?->format('d M Y, H:i') }}</td>
+                </tr>
+            @endif
             <tr>
-                <td class="text-center">1</td>
-                <td>Demand Approved</td>
-                <td>{{ $order->demand->raisedBy->full_name }} (Raised)</td>
-                <td>Ref: {{ $order->demand->ref }} · Approved value: {{ \App\Support\Money::npr($order->demand->total_amount) }}</td>
-                <td class="text-right">{{ $order->demand->closed_at ? $order->demand->closed_at->format('d M Y, H:i') : $order->demand->created_at->format('d M Y, H:i') }}</td>
-            </tr>
-            <tr>
-                <td class="text-center">2</td>
+                <td class="text-center">{{ $order->demand ? '2' : '1' }}</td>
                 <td><strong>Purchase Order Issued</strong></td>
-                <td>{{ $order->orderedBy->full_name }}<br><span style="color:#64748b; font-size: 9px;">{{ $order->orderedBy->designation }}</span></td>
-                <td>Issued to {{ $order->vendor->name }} · Total: {{ \App\Support\Money::npr($order->order_amount) }}</td>
-                <td class="text-right">{{ $order->ordered_at->format('d M Y, H:i') }}</td>
+                <td>{{ $order->orderedBy?->full_name ?? 'Purchaser' }}<br><span style="color:#64748b; font-size: 9px;">{{ $order->orderedBy?->designation ?? 'Procurement' }}</span></td>
+                <td>Issued to {{ $order->vendor?->name ?? 'Vendor' }} · Total: {{ \App\Support\Money::npr($order->order_amount) }}</td>
+                <td class="text-right">{{ $order->ordered_at?->format('d M Y, H:i') }}</td>
             </tr>
             @if ($order->receipt)
                 <tr>
                     <td class="text-center">3</td>
                     <td><strong>Goods Inspected & Verified</strong></td>
-                    <td>{{ $order->receipt->receivedBy->full_name }}<br><span style="color:#64748b; font-size: 9px;">{{ $order->receipt->receivedBy->designation }}</span></td>
-                    <td>Received into {{ $order->receipt->location->name }}{{ $order->receipt->challan_no ? ' · Challan: ' . $order->receipt->challan_no : '' }}</td>
-                    <td class="text-right">{{ $order->receipt->received_at->format('d M Y, H:i') }}</td>
+                    <td>{{ $order->receipt->receivedBy?->full_name ?? 'Officer' }}<br><span style="color:#64748b; font-size: 9px;">{{ $order->receipt->receivedBy?->designation ?? 'Receiving' }}</span></td>
+                    <td>Received into {{ $order->receipt->location?->name ?? 'Store' }}{{ $order->receipt->challan_no ? ' · Challan: ' . $order->receipt->challan_no : '' }}</td>
+                    <td class="text-right">{{ $order->receipt->received_at?->format('d M Y, H:i') }}</td>
                 </tr>
             @endif
             @foreach ($order->bills as $i => $bill)
                 <tr>
                     <td class="text-center">{{ 4 + $i }}</td>
                     <td>Bill Entered ({{ $bill->bill_no }})</td>
-                    <td>{{ $bill->enteredBy->full_name }}<br><span style="color:#64748b; font-size: 9px;">{{ $bill->enteredBy->designation }}</span></td>
-                    <td>Bill Amount: {{ \App\Support\Money::npr($bill->bill_amount) }} · Status: {{ $bill->match_status->label() }}</td>
-                    <td class="text-right">{{ $bill->entered_at->format('d M Y, H:i') }}</td>
+                    <td>{{ $bill->enteredBy?->full_name ?? 'Accounts' }}<br><span style="color:#64748b; font-size: 9px;">{{ $bill->enteredBy?->designation ?? 'Finance' }}</span></td>
+                    <td>Bill Amount: {{ \App\Support\Money::npr($bill->bill_amount) }} · Status: {{ $bill->match_status?->label() }}</td>
+                    <td class="text-right">{{ $bill->entered_at?->format('d M Y, H:i') }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -395,22 +407,22 @@
             <td>
                 <div class="sig-line">
                     <p class="sig-role">Purchase Officer</p>
-                    <p class="sig-name">{{ $order->orderedBy->full_name }}</p>
-                    <p class="sig-date">{{ $order->orderedBy->designation }} · {{ $order->ordered_at->format('d M Y') }}</p>
+                    <p class="sig-name">{{ $order->orderedBy?->full_name ?? 'Purchaser' }}</p>
+                    <p class="sig-date">{{ $order->ordered_at?->format('d M Y') }}</p>
                 </div>
             </td>
             <td>
                 <div class="sig-line">
                     <p class="sig-role">Vendor Acceptance</p>
-                    <p class="sig-name">{{ $order->vendor->name }}</p>
+                    <p class="sig-name">{{ $order->vendor?->name ?? 'Vendor' }}</p>
                     <p class="sig-date">Signature & Seal: ____________</p>
                 </div>
             </td>
             <td>
                 <div class="sig-line">
                     <p class="sig-role">Receiving Officer</p>
-                    <p class="sig-name">{{ $order->receipt ? $order->receipt->receivedBy->full_name : 'Pending Goods Arrival' }}</p>
-                    <p class="sig-date">{{ $order->receipt ? $order->receipt->received_at->format('d M Y') : 'Date: _______________' }}</p>
+                    <p class="sig-name">{{ $order->receipt ? ($order->receipt->receivedBy?->full_name ?? 'Officer') : 'Pending Goods Arrival' }}</p>
+                    <p class="sig-date">{{ $order->receipt ? ($order->receipt->received_at?->format('d M Y') ?? '') : 'Date: _______________' }}</p>
                 </div>
             </td>
             <td>

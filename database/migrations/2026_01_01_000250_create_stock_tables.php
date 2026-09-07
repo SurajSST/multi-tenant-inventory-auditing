@@ -51,6 +51,8 @@ return new class extends Migration
             // Materialised full code, unique across the school.
             $table->string('unit_code');
             $table->uuid('location_id')->nullable();
+            $table->uuid('purchase_order_line_id')->nullable();
+            $table->uuid('goods_receipt_line_id')->nullable();
             $table->string('serial_no')->nullable();
             $table->string('status', 16)->default('ACTIVE');
             $table->date('acquired_on')->nullable();
@@ -61,11 +63,17 @@ return new class extends Migration
             $table->unique(['tenant_id', 'unit_code']);
             $table->unique(['item_type_id', 'unit_no']);
             $table->index('location_id');
+            $table->index('purchase_order_line_id');
+            $table->index('goods_receipt_line_id');
 
             $table->foreign(['tenant_id', 'item_type_id'])
                 ->references(['tenant_id', 'id'])->on('item_types');
             $table->foreign(['tenant_id', 'location_id'])
                 ->references(['tenant_id', 'id'])->on('locations');
+            $table->foreign('purchase_order_line_id')
+                ->references('id')->on('purchase_order_lines')->nullOnDelete();
+            $table->foreign('goods_receipt_line_id')
+                ->references('id')->on('goods_receipt_lines')->nullOnDelete();
         });
     }
 

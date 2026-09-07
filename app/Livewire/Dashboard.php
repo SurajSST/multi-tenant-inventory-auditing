@@ -38,7 +38,7 @@ class Dashboard extends Component
         return view('livewire.dashboard', [
             'stats' => $reports->dashboard(),
             'myQueue' => $demands->myQueue($user),
-            'toOrder' => $user->can('place-orders') ? $orders->awaitingOrder() : collect(),
+            'toOrderCount' => $user->can('place-orders') ? $orders->awaitingOrderCount() : 0,
             'toReceive' => $user->can('receive-goods')
                 ? $orders->awaitingReceipt($user)
                 : collect(),

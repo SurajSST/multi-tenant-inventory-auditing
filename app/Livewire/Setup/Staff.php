@@ -29,6 +29,8 @@ use Livewire\Component;
  */
 class Staff extends Component
 {
+    public string $search = '';
+
     public bool $showForm = false;
 
     /** The posting being edited, never the person. */
@@ -327,9 +329,12 @@ class Staff extends Component
             );
         });
 
-        session()->flash('status', $isNewPosting
+        $msg = $isNewPosting
             ? $this->fullName.' can now work at this school.'
-            : $this->fullName.' updated.');
+            : $this->fullName.' updated.';
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: $isNewPosting ? 'Staff Added' : 'Staff Updated');
 
         $this->cancel();
     }
@@ -341,6 +346,7 @@ class Staff extends Component
 
         if ($membership->user_id === auth()->id()) {
             $this->addError('staff', 'You cannot stand yourself down from your own school.');
+            $this->dispatch('toast', message: 'You cannot stand yourself down from your own school.', tone: 'danger', title: 'Action Denied');
 
             return;
         }
@@ -355,9 +361,12 @@ class Staff extends Component
                 .($membership->is_active ? 'reinstated at' : 'stood down from').' this school',
         );
 
-        session()->flash('status', $membership->is_active
+        $msg = $membership->is_active
             ? $membership->user->full_name.' can work here again.'
-            : $membership->user->full_name.' no longer works here. Their account at any other school is untouched.');
+            : $membership->user->full_name.' no longer works here. Their account at any other school is untouched.';
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $membership->is_active ? 'ok' : 'warn', title: 'Staff Status');
     }
 
     public function resetPassword(string $membershipId, AuditLogger $audit): void
@@ -377,11 +386,14 @@ class Staff extends Component
             detail: $person->full_name."'s password was reset by ".auth()->user()->full_name,
         );
 
-        session()->flash('status', $person->full_name.
+        $msg = $person->full_name.
             ' has been reset to the default password and must change it on next sign-in.'.
             ($person->memberships()->count() > 1
                 ? ' This is their login everywhere, so it applies at every school they work at.'
-                : ''));
+                : '');
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: 'Password Reset');
     }
 
     public function render(): View
@@ -393,6 +405,16 @@ class Staff extends Component
             'staff' => TenantUser::query()
                 ->where('tenant_id', app(TenantContext::class)->idOrFail())
                 ->with(['user', 'roleRows', 'auditScopes.location'])
+                ->when($this->search, function ($q, $search) {
+                    $search = trim($search);
+                    $q->where(function ($sub) use ($search) {
+                        $sub->where('staff_code', 'like', "%{$search}%")
+                            ->orWhere('designation', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn ($u) => $u->where('full_name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%"));
+                    });
+                })
                 ->orderBy('staff_code')
                 ->get(),
             'allRoles' => Role::cases(),

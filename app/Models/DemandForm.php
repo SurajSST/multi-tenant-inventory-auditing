@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\DemandStatus;
+use App\Support\Money;
 use App\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -53,6 +54,11 @@ class DemandForm extends Model
         return $this->hasMany(PurchaseOrder::class, 'demand_id');
     }
 
+    public function purchaseOrders(): HasMany
+    {
+        return $this->orders();
+    }
+
     public function isPending(): bool
     {
         return $this->status === DemandStatus::PENDING;
@@ -69,5 +75,33 @@ class DemandForm extends Model
         return $this->current_tier === null
             ? 0
             : max(0, $this->final_tier - $this->current_tier + 1);
+    }
+
+    public function isFullyOrdered(): bool
+    {
+        if ($this->lines->isEmpty()) {
+            return false;
+        }
+
+        foreach ($this->lines as $line) {
+            if ($line->remainingToOrderQty() > 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function remainingAmountToOrder(): string
+    {
+        $total = '0.00';
+        foreach ($this->lines as $line) {
+            $rem = $line->remainingToOrderQty();
+            if ($rem > 0) {
+                $total = Money::add($total, Money::mul($line->unit_rate, $rem));
+            }
+        }
+
+        return $total;
     }
 }

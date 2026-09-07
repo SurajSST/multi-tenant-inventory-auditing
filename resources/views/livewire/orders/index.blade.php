@@ -43,7 +43,7 @@
                                     {{ $demand->raisedBy->full_name }}
                                 </td>
                                 <td class="px-4 py-3 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
-                                    {{ $demand->closed_at?->format('d M Y, H:i') ?? $demand->updated_at->format('d M Y') }}
+                                    <x-bs-date :date="$demand->closed_at ?? $demand->created_at" />
                                 </td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap font-semibold">
                                     <x-money :amount="$demand->total_amount" class="text-slate-900 dark:text-slate-100" />
@@ -64,7 +64,11 @@
     @endif
 
     <x-card class="mb-5">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4 sm:grid-cols-3">
+            <x-field label="Search" for="search">
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Search ref, vendor, item..." />
+            </x-field>
+
             <x-field label="Status" for="status">
                 <x-select id="status" wire:model.live="status">
                     <option value="">Every status</option>
@@ -112,15 +116,19 @@
                                         {{ $order->ref }}
                                     </a>
                                     <span class="block text-xs text-slate-400 dark:text-slate-500">
-                                        {{ $order->ordered_at->format('d M Y') }}
+                                        <x-bs-date :date="$order->ordered_at" />
                                     </span>
                                 </td>
                                 <td class="px-4 py-3.5 whitespace-nowrap">
-                                    <a href="{{ route('demands.show', $order->demand_id) }}" wire:navigate
-                                       class="font-medium text-slate-800 hover:text-indigo-600 dark:text-slate-200 dark:hover:text-sky-400">
-                                        {{ $order->demand->ref }}
-                                    </a>
-                                    <span class="block text-xs text-slate-400 dark:text-slate-500">{{ $order->demand->department }}</span>
+                                    @if ($order->demand)
+                                        <a href="{{ route('demands.show', $order->demand_id) }}" wire:navigate
+                                           class="font-medium text-slate-800 hover:text-indigo-600 dark:text-slate-200 dark:hover:text-sky-400">
+                                            {{ $order->demand->ref }}
+                                        </a>
+                                        <span class="block text-xs text-slate-400 dark:text-slate-500">{{ $order->demand->department }}</span>
+                                    @else
+                                        <span class="text-xs text-slate-400 dark:text-slate-500">Direct Order</span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3.5 whitespace-nowrap text-slate-800 dark:text-slate-200 font-medium">
                                     {{ $order->vendor->name }}
@@ -137,10 +145,10 @@
                                             <svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                                             </svg>
-                                            Verified by {{ $order->receipt->receivedBy->full_name }}
+                                            Verified by {{ $order->receipt->receivedBy?->full_name ?? 'Receiving Officer' }}
                                         </span>
                                         <span class="block text-[11px] text-slate-400 dark:text-slate-500">
-                                            {{ $order->receipt->received_at->format('d M Y') }}
+                                            {{ $order->receipt->received_at?->format('d M Y') }}
                                         </span>
                                     @else
                                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300">
@@ -157,7 +165,7 @@
                                 <td class="px-5 py-3.5 text-right whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-2">
                                         @can('receive-goods')
-                                            @if (! $order->receipt && $order->ordered_by_id !== auth()->id())
+                                            @if ($order->status !== \App\Enums\OrderStatus::RECEIVED && $order->status !== \App\Enums\OrderStatus::CANCELLED && $order->ordered_by_id !== auth()->id())
                                                 <x-button size="xs" href="{{ route('orders.receive', $order) }}" wire:navigate>
                                                     Verify
                                                 </x-button>

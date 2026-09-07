@@ -8,6 +8,7 @@ use App\Models\DemandForm;
 use App\Models\ItemType;
 use App\Models\Location;
 use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderLine;
 use App\Services\BillService;
 use App\Services\DemandService;
 use App\Services\InventoryService;
@@ -78,7 +79,7 @@ class ConcurrencyGuardTest extends TestCase
         $this->assertSame(1, PurchaseOrder::where('demand_id', $demand->id)->count());
     }
 
-    public function test_the_database_refuses_a_second_order_even_when_the_service_is_bypassed(): void
+    public function test_the_database_refuses_a_po_line_with_non_positive_quantity(): void
     {
         $demand = $this->approvedDemand();
 
@@ -90,13 +91,18 @@ class ConcurrencyGuardTest extends TestCase
 
         $this->expectException(QueryException::class);
 
-        PurchaseOrder::create([
-            'ref' => 'PO-9999-0001',
-            'fiscal_year' => $first->fiscal_year,
-            'demand_id' => $demand->id,
-            'vendor_id' => $first->vendor_id,
-            'order_amount' => 60000,
-            'ordered_by_id' => $first->ordered_by_id,
+        PurchaseOrderLine::create([
+            'tenant_id' => $first->tenant_id,
+            'purchase_order_id' => $first->id,
+            'demand_line_id' => $demand->lines->first()->id,
+            'item_type_id' => $demand->lines->first()->item_type_id,
+            'description' => 'Test chair',
+            'quantity_ordered' => 0,
+            'unit' => 'piece',
+            'unit_price' => 1500,
+            'discount' => 0,
+            'tax' => 0,
+            'line_total' => 0,
         ]);
     }
 

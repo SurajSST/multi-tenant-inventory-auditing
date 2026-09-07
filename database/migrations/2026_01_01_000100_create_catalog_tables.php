@@ -105,6 +105,7 @@ return new class extends Migration
             $table->unique(['tenant_id', 'id'], 'uniq_item_type_tenant_id');
             $table->index('category_id');
             $table->index(['tenant_id', 'lifespan']);
+            $table->index(['tenant_id', 'is_active', 'category_id'], 'idx_items_active_cat');
 
             $table->foreign(['tenant_id', 'category_id'])
                 ->references(['tenant_id', 'id'])->on('categories');

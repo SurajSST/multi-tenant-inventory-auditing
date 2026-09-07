@@ -16,6 +16,9 @@ class Index extends Component
     use WithPagination;
 
     #[Url(except: '')]
+    public string $search = '';
+
+    #[Url(except: '')]
     public string $status = '';
 
     #[Url(except: '')]
@@ -54,6 +57,7 @@ class Index extends Component
                 $this->status ? DemandStatus::from($this->status) : null,
                 $this->mine,
                 $this->department ?: null,
+                $this->search ?: null,
             ),
             'seesEverything' => $user->seesEverything(),
         ])->title('Demand Forms');

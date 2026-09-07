@@ -8,10 +8,10 @@
         <div class="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-300">{{ $message }}</div>
     @enderror
 
-    @if ($this->order->receipt)
+    @if ($this->order->isReceived())
         <x-card>
-            <x-empty title="This order has already been verified"
-                     :note="$this->order->receipt->receivedBy->full_name . ' verified it on ' . $this->order->receipt->received_at->format('d M Y, H:i') . '. A receipt is recorded once and cannot be redone.'">
+            <x-empty title="This order has already been completely received"
+                     :note="'All items on ' . $this->order->ref . ' have been delivered and verified into the stock ledger.'">
                 <x-button variant="secondary" href="{{ route('orders.show', $this->order) }}" wire:navigate>See the order</x-button>
             </x-empty>
         </x-card>
@@ -23,6 +23,12 @@
             </x-empty>
         </x-card>
     @else
+        @if ($this->order->isPartReceived())
+            <div class="mb-5 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 dark:bg-sky-500/10 dark:text-sky-300">
+                <strong>Subsequent Delivery:</strong> This order has prior partial deliveries recorded. Enter the remaining items arriving with this shipment below.
+            </div>
+        @endif
+
         <form wire:submit="save" class="space-y-6">
 
             <x-card title="What arrived"
@@ -34,25 +40,36 @@
                             <tr>
                                 <th scope="col" class="px-5 py-2.5 font-medium">Item</th>
                                 <th scope="col" class="px-4 py-2.5 text-right font-medium">Ordered</th>
-                                <th scope="col" class="px-4 py-2.5 text-right font-medium">Received</th>
+                                <th scope="col" class="px-4 py-2.5 text-right font-medium">Prior Recv</th>
+                                <th scope="col" class="px-4 py-2.5 text-right font-medium">Remaining</th>
+                                <th scope="col" class="px-4 py-2.5 text-right font-medium">Receiving Now</th>
                                 <th scope="col" class="px-5 py-2.5 font-medium">Remark</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100 dark:divide-white/5">
-                            @foreach ($this->order->demand->lines as $line)
-                                @php $short = (int) ($received[$line->id] ?? 0) < $line->quantity @endphp
+                            @foreach ($this->displayLines as $line)
+                                @php
+                                    $ordered = $line->quantity_ordered ?? $line->quantity;
+                                    $prior = $this->priorReceived[$line->id] ?? 0;
+                                    $rem = $this->remainingQty[$line->id] ?? $ordered;
+                                    $curr = (int) ($received[$line->id] ?? 0);
+                                    $short = ($prior + $curr) < $ordered;
+                                    $name = $line->description ?? $line->item_name;
+                                @endphp
                                 <tr wire:key="rl-{{ $line->id }}" class="{{ $short ? 'bg-amber-50 dark:bg-amber-500/10' : '' }}">
                                     <td class="px-5 py-2.5 text-slate-900 dark:text-slate-100">
-                                        {{ $line->item_name }}
+                                        {{ $name }}
                                         @if (! $line->item_type_id)
-                                            <span class="block text-xs text-amber-700 dark:text-amber-400">Not on the register — this will not post into stock.</span>
-                                        @elseif ($line->specification)
+                                            <span class="block text-xs text-sky-600 dark:text-sky-400">Custom item — will automatically register into catalog & ledger.</span>
+                                        @elseif (! empty($line->specification))
                                             <span class="block text-xs text-slate-500 dark:text-slate-500">{{ $line->specification }}</span>
                                         @endif
                                     </td>
-                                    <td class="tnum px-4 py-2.5 text-right text-slate-600 dark:text-slate-400">{{ $line->quantity }}</td>
+                                    <td class="tnum px-4 py-2.5 text-right text-slate-600 dark:text-slate-400">{{ $ordered }}</td>
+                                    <td class="tnum px-4 py-2.5 text-right text-slate-500 dark:text-slate-400">{{ $prior }}</td>
+                                    <td class="tnum px-4 py-2.5 text-right font-semibold text-slate-700 dark:text-slate-300">{{ $rem }}</td>
                                     <td class="px-4 py-2.5 text-right">
-                                        <input type="number" min="0" max="{{ $line->quantity }}" inputmode="numeric"
+                                        <input type="number" min="0" max="{{ $rem }}" inputmode="numeric"
                                                wire:model.live.debounce.400ms="received.{{ $line->id }}"
                                                class="tnum w-24 rounded-lg border-slate-300 bg-white text-right text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-500 {{ $short ? 'border-amber-400 dark:border-amber-500/60' : '' }}" />
                                     </td>
@@ -98,30 +115,28 @@
                         <div wire:loading wire:target="photo" class="mt-1 text-xs text-slate-500 dark:text-slate-500">Uploading…</div>
                     </x-field>
 
-                    <x-field label="Discrepancy note" for="discrepancyNote" class="sm:col-span-2"
-                             :required="$this->isShort"
-                             :hint="$this->isShort
-                                ? 'Less arrived than was ordered, so this is required.'
-                                : 'Optional — anything that did not match the order.'"
-                             :error="$errors->first('discrepancyNote')">
-                        <x-textarea id="discrepancyNote" wire:model="discrepancyNote" rows="3" />
-                    </x-field>
+                    <div class="sm:col-span-2">
+                        <x-field label="Discrepancy note" for="discrepancyNote"
+                                 :hint="$this->isShort ? 'Required — less arrived than was ordered.' : 'Optional.'"
+                                 :error="$errors->first('discrepancyNote')">
+                            <x-textarea id="discrepancyNote" wire:model="discrepancyNote" rows="2"
+                                        placeholder="E.g. Supplier only had 15 in stock today; remaining 5 will arrive next week." />
+                        </x-field>
+                    </div>
                 </div>
 
-                <p class="mt-5 rounded-lg bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600 dark:bg-white/5 dark:text-slate-400">
-                    You are verifying this as <strong>{{ auth()->user()->full_name }}</strong>.
-                    {{ $this->order->orderedBy->full_name }} placed the order and cannot do this step.
-                    The receipt is recorded once, timestamped, and cannot be edited afterwards.
-                </p>
+                <x-slot:footer>
+                    <div class="flex items-center justify-between">
+                        <div class="text-xs text-slate-500 dark:text-slate-400">
+                            Recorded against {{ $this->order->ref }} by {{ auth()->user()->full_name }}.
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <x-button variant="secondary" href="{{ route('orders.show', $this->order) }}" wire:navigate>Cancel</x-button>
+                            <x-button type="submit">Verify & post to stock</x-button>
+                        </div>
+                    </div>
+                </x-slot:footer>
             </x-card>
-
-            <div class="flex flex-wrap items-center justify-end gap-3">
-                <x-button variant="secondary" href="{{ route('orders.index') }}" wire:navigate>Cancel</x-button>
-                <x-button type="submit" wire:loading.attr="disabled" wire:target="save">
-                    <span wire:loading.remove wire:target="save">Confirm the goods arrived</span>
-                    <span wire:loading wire:target="save">Recording…</span>
-                </x-button>
-            </div>
         </form>
     @endif
 </div>

@@ -47,6 +47,11 @@ class Money
         return self::cmp($a, $b) === 0;
     }
 
+    public static function ne(int|float|string|null $a, int|float|string|null $b): bool
+    {
+        return self::cmp($a, $b) !== 0;
+    }
+
     public static function gt(int|float|string|null $a, int|float|string|null $b): bool
     {
         return self::cmp($a, $b) > 0;
@@ -77,6 +82,16 @@ class Money
         $v = self::of($v);
 
         return str_starts_with($v, '-') ? substr($v, 1) : $v;
+    }
+
+    public static function min(int|float|string|null $a, int|float|string|null $b): string
+    {
+        return self::lt($a, $b) ? self::of($a) : self::of($b);
+    }
+
+    public static function max(int|float|string|null $a, int|float|string|null $b): string
+    {
+        return self::gt($a, $b) ? self::of($a) : self::of($b);
     }
 
     /** @param  iterable<int|float|string|null>  $values */
@@ -118,5 +133,13 @@ class Money
         }
 
         return ($negative ? '-' : '').$whole.'.'.$paisa;
+    }
+
+    /** The number alone, omitting trailing .00 paisa if whole, ideal for high-level stat tiles. */
+    public static function formatCompact(int|float|string|null $v): string
+    {
+        $formatted = self::format($v);
+
+        return str_ends_with($formatted, '.00') ? substr($formatted, 0, -3) : $formatted;
     }
 }

@@ -89,6 +89,17 @@ class IntegrityRules
             'ALTER TABLE goods_receipt_lines
                ADD CONSTRAINT chk_receipt_qty
                CHECK (qty_received >= 0 AND qty_received <= qty_ordered)',
+
+            // The person who entered a bill can never be the one who clears its variance.
+            "CREATE TRIGGER trg_bill_variance_different_user
+               BEFORE UPDATE ON bills
+               FOR EACH ROW
+             BEGIN
+               IF NEW.match_status = 'VARIANCE_CLEARED' AND NEW.cleared_by_id = NEW.entered_by_id THEN
+                 SIGNAL SQLSTATE '45000'
+                   SET MESSAGE_TEXT = 'Separation of duties: whoever entered a bill cannot clear its variance.';
+               END IF;
+             END",
         ];
     }
 
@@ -188,6 +199,9 @@ class IntegrityRules
             'bills' => ['entered_by_id', 'Whoever enters a bill must be posted to that school.'],
             'petty_cash_tokens' => ['issued_by_id', 'Whoever issues a token must be posted to that school.'],
             'stock_count_entries' => ['counted_by_id', 'Whoever enters a count must be posted to that school.'],
+            'payments' => ['paid_by_id', 'Whoever records a payment must be posted to that school.'],
+            'journal_entries' => ['posted_by_id', 'Whoever posts a journal entry must be posted to that school.'],
+            'supplier_returns' => ['returned_by_id', 'Whoever records a return must be posted to that school.'],
         ] as $table => [$column, $message]) {
             $out[] = "CREATE TRIGGER trg_actor_posted_{$table}
                BEFORE INSERT ON {$table}
@@ -223,6 +237,8 @@ class IntegrityRules
             'audit_log' => 'The audit trail is append-only. History cannot be changed or deleted.',
             'stock_count_entries' => 'The stock ledger is append-only. Record a correcting count instead.',
             'demand_approvals' => 'Approvals are append-only. A decision cannot be changed or deleted.',
+            'journal_entries' => 'Journal entries are append-only. Post a reversing entry instead.',
+            'payments' => 'Payments are append-only. History cannot be changed or deleted.',
         ] as $table => $message) {
             foreach (['UPDATE', 'DELETE'] as $event) {
                 $name = 'trg_append_only_'.$table.'_'.strtolower($event);
@@ -280,6 +296,26 @@ class IntegrityRules
             'ALTER TABLE approval_tiers
                ADD CONSTRAINT chk_tier_range
                CHECK (max_amount IS NULL OR max_amount > min_amount)',
+
+            'ALTER TABLE payments
+               ADD CONSTRAINT chk_payment_positive
+               CHECK (amount > 0)',
+
+            'ALTER TABLE journal_entry_lines
+               ADD CONSTRAINT chk_journal_line_positive
+               CHECK (debit >= 0 AND credit >= 0 AND (debit > 0 OR credit > 0))',
+
+            'ALTER TABLE purchase_order_lines
+               ADD CONSTRAINT chk_po_line_positive
+               CHECK (quantity_ordered > 0 AND unit_price >= 0 AND line_total >= 0)',
+
+            'ALTER TABLE bill_lines
+               ADD CONSTRAINT chk_bill_line_positive
+               CHECK (quantity > 0 AND unit_price >= 0 AND line_total >= 0)',
+
+            'ALTER TABLE supplier_returns
+               ADD CONSTRAINT chk_supplier_return_positive
+               CHECK (total_amount > 0)',
         ];
     }
 
@@ -302,7 +338,7 @@ class IntegrityRules
              FROM (
                SELECT e.*,
                       ROW_NUMBER() OVER (
-                        PARTITION BY e.item_type_id, e.location_id
+                        PARTITION BY e.tenant_id, e.item_type_id, e.location_id
                         ORDER BY e.counted_at DESC, e.id DESC
                       ) AS rn
                FROM stock_count_entries e
@@ -332,13 +368,13 @@ class IntegrityRules
              CROSS JOIN locations l
              JOIN categories c         ON c.id = it.category_id
              LEFT JOIN subcategories s ON s.id = it.subcategory_id
-             LEFT JOIN v_current_stock cs ON cs.item_type_id = it.id AND cs.location_id = l.id
+             LEFT JOIN v_current_stock cs ON cs.tenant_id = it.tenant_id AND cs.item_type_id = it.id AND cs.location_id = l.id
              LEFT JOIN users u         ON u.id = cs.last_counted_by
              WHERE it.is_active = 1 AND l.is_active = 1
                AND l.tenant_id = it.tenant_id',
 
-            // Three-way match, computed live from the source rows. A bill is
-            // MATCHED only when it equals the order and does not exceed approval.
+            // Three-way match, computed live from the source rows.
+            // Compares approved, ordered, received, and billed amounts.
             'CREATE OR REPLACE VIEW v_three_way_match AS
              SELECT b.tenant_id,
                     b.id            AS bill_id,
@@ -349,10 +385,14 @@ class IntegrityRules
                     po.ref          AS po_ref,
                     d.total_amount  AS approved_amount,
                     po.order_amount AS ordered_amount,
+                    COALESCE(gr_sum.received_value, 0) AS received_amount,
                     b.bill_amount   AS billed_amount,
                     (b.bill_amount - po.order_amount) AS variance_vs_order,
                     (b.bill_amount - d.total_amount)  AS variance_vs_approval,
+                    (b.bill_amount - COALESCE(gr_sum.received_value, 0)) AS variance_vs_receipt,
                     b.match_status,
+                    b.payment_status,
+                    b.paid_amount,
                     b.variance_note,
                     ub.full_name    AS entered_by,
                     uc.full_name    AS cleared_by
@@ -360,6 +400,15 @@ class IntegrityRules
              JOIN vendors v               ON v.id = b.vendor_id
              LEFT JOIN purchase_orders po ON po.id = b.purchase_order_id
              LEFT JOIN demand_forms d     ON d.id = po.demand_id
+             LEFT JOIN (
+               SELECT gr.purchase_order_id,
+                      SUM(grl.qty_received * COALESCE(pol.unit_price, dl.unit_rate, 0)) AS received_value
+               FROM goods_receipts gr
+               JOIN goods_receipt_lines grl ON grl.receipt_id = gr.id
+               LEFT JOIN purchase_order_lines pol ON pol.id = grl.purchase_order_line_id
+               LEFT JOIN demand_lines dl         ON dl.id = grl.demand_line_id
+               GROUP BY gr.purchase_order_id
+             ) gr_sum ON gr_sum.purchase_order_id = po.id
              LEFT JOIN users ub           ON ub.id = b.entered_by_id
              LEFT JOIN users uc           ON uc.id = b.cleared_by_id',
 
@@ -402,7 +451,17 @@ class IntegrityRules
         self::drop();
 
         foreach (self::createStatements() as $sql) {
-            DB::unprepared($sql);
+            try {
+                DB::unprepared($sql);
+            } catch (Throwable $e) {
+                // If a table has not been created yet in an earlier migration (e.g. 000600 before 001100),
+                // skip it. Subsequent migrations (001200) re-apply all rules once tables exist.
+                if (str_contains($e->getMessage(), "doesn't exist") || str_contains($e->getMessage(), 'Unknown table')) {
+                    continue;
+                }
+
+                throw $e;
+            }
         }
     }
 
@@ -441,6 +500,11 @@ class IntegrityRules
             'chk_variance_note' => 'bills',
             'chk_token_valid' => 'petty_cash_tokens',
             'chk_tier_range' => 'approval_tiers',
+            'chk_payment_positive' => 'payments',
+            'chk_journal_line_positive' => 'journal_entry_lines',
+            'chk_po_line_positive' => 'purchase_order_lines',
+            'chk_bill_line_positive' => 'bill_lines',
+            'chk_supplier_return_positive' => 'supplier_returns',
         ];
     }
 
@@ -449,6 +513,7 @@ class IntegrityRules
         return [
             'trg_receipt_orderer',
             'trg_receipt_orderer_upd',
+            'trg_bill_variance_different_user',
             'trg_no_self_approval',
             'trg_bill_not_already_tokenised',
             'trg_token_not_already_billed',
@@ -459,12 +524,19 @@ class IntegrityRules
             'trg_actor_posted_bills',
             'trg_actor_posted_petty_cash_tokens',
             'trg_actor_posted_stock_count_entries',
+            'trg_actor_posted_payments',
+            'trg_actor_posted_journal_entries',
+            'trg_actor_posted_supplier_returns',
             'trg_append_only_audit_log_update',
             'trg_append_only_audit_log_delete',
             'trg_append_only_stock_count_entries_update',
             'trg_append_only_stock_count_entries_delete',
             'trg_append_only_demand_approvals_update',
             'trg_append_only_demand_approvals_delete',
+            'trg_append_only_journal_entries_update',
+            'trg_append_only_journal_entries_delete',
+            'trg_append_only_payments_update',
+            'trg_append_only_payments_delete',
         ];
     }
 

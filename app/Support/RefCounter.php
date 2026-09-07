@@ -55,6 +55,9 @@ class RefCounter
                 'DF' => $highest('demand_forms', 'ref'),
                 'PO' => $highest('purchase_orders', 'ref'),
                 'PC' => $highest('petty_cash_tokens', 'serial'),
+                'PV' => $highest('payments', 'voucher_no'),
+                'JV' => $highest('journal_entries', 'entry_no'),
+                'SR' => $highest('supplier_returns', 'ref'),
                 default => 0,
             };
 

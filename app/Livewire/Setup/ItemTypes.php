@@ -184,7 +184,10 @@ class ItemTypes extends Component
                 .$item->name.' ('.$item->code_prefix.')',
         );
 
-        session()->flash('status', $item->name.' saved.');
+        $msg = $item->name.' saved.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: $this->editingId ? 'Item Updated' : 'Item Created');
+
         $this->cancel();
     }
 
@@ -200,7 +203,9 @@ class ItemTypes extends Component
             detail: $item->name.' was '.($item->is_active ? 'reactivated' : 'retired'),
         );
 
-        session()->flash('status', $item->name.' '.($item->is_active ? 'reactivated' : 'retired').'.');
+        $msg = $item->name.' '.($item->is_active ? 'reactivated' : 'retired').'.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $item->is_active ? 'ok' : 'warn', title: 'Item Status');
     }
 
     public function render(): View

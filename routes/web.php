@@ -50,12 +50,16 @@ Route::middleware('auth')->group(function () {
     Route::get('demands/{demand}/print', [DocumentController::class, 'demand'])->name('demands.print');
     Route::get('demands/{demand}/pdf', [DocumentController::class, 'demand'])->name('demands.pdf');
 
-    // Orders and receipts
+    // Orders, receipts, and returns
     Route::get('orders', Livewire\Orders\Index::class)->name('orders.index');
     Route::get('orders/new', Livewire\Orders\Create::class)
         ->middleware('role:PURCHASE_OFFICER,SUPER_ADMIN')->name('orders.create');
     Route::get('orders/{order}/receive', Livewire\Orders\Receive::class)
         ->middleware('role:RECEIVING_OFFICER,SUPER_ADMIN')->name('orders.receive');
+    Route::get('orders/{order}/return', Livewire\Orders\SupplierReturnCreate::class)
+        ->middleware('role:RECEIVING_OFFICER,SUPER_ADMIN')->name('orders.return');
+    Route::get('supplier-returns', Livewire\Orders\SupplierReturnIndex::class)
+        ->middleware('role:RECEIVING_OFFICER,PURCHASE_OFFICER,ACCOUNTS,SUPER_ADMIN')->name('supplier-returns.index');
     Route::get('orders/{order}', Livewire\Orders\Show::class)->name('orders.show');
     Route::get('orders/{order}/print', [DocumentController::class, 'order'])->name('orders.print');
     Route::get('orders/{order}/pdf', [DocumentController::class, 'order'])->name('orders.pdf');
@@ -64,8 +68,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:ACCOUNTS,SUPER_ADMIN')->group(function () {
         Route::get('bills', Livewire\Bills\Index::class)->name('bills.index');
         Route::get('bills/new', Livewire\Bills\Create::class)->name('bills.create');
+        Route::get('bills/pay', Livewire\Bills\Pay::class)->name('bills.pay');
         Route::get('bills/print', [DocumentController::class, 'bills'])->name('bills.print');
         Route::get('bills/pdf', [DocumentController::class, 'bills'])->name('bills.pdf');
+
+        Route::get('payments', Livewire\Payments\Index::class)->name('payments.index');
+        Route::get('accounting/trial-balance', Livewire\Accounting\TrialBalance::class)->name('accounting.trial-balance');
 
         Route::get('petty-cash', Livewire\PettyCash\Index::class)->name('petty-cash.index');
         Route::get('petty-cash/new', Livewire\PettyCash\Issue::class)->name('petty-cash.issue');

@@ -11,7 +11,11 @@
     </x-page-header>
 
     <x-card class="mb-5">
-        <div class="grid gap-4 sm:grid-cols-3">
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <x-field label="Search" for="search">
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Search ref, dept, item, requester..." />
+            </x-field>
+
             <x-field label="Status" for="status">
                 <x-select id="status" wire:model.live="status">
                     <option value="">Every status</option>
@@ -74,7 +78,7 @@
                                         {{ $demand->ref }}
                                     </a>
                                     <span class="block text-xs text-slate-400 dark:text-slate-500">
-                                        {{ $demand->created_at->format('d M Y, H:i') }}
+                                        <x-bs-date :date="$demand->created_at" />
                                     </span>
                                 </td>
                                 <td class="px-4 py-3.5 whitespace-nowrap text-slate-700 dark:text-slate-300">

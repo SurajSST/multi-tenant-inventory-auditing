@@ -11,6 +11,7 @@ use App\Models\PurchaseOrder;
 use App\Services\BillService;
 use App\Services\DemandService;
 use App\Services\OrderService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -163,8 +164,17 @@ class ThreeWayMatchTest extends TestCase
             'bill_amount' => 63500,
         ], $accounts);
 
+        $approver = $this->staff('accounts2@prativa.edu.np');
+
         try {
-            $bills->clearVariance($bill->id, 'ok', $accounts);
+            $bills->clearVariance($bill->id, 'Vendor added transport and loading charges.', $accounts);
+            $this->fail('The person who entered the bill cannot clear its variance.');
+        } catch (AuthorizationException $e) {
+            $this->assertStringContainsString('entered this bill', $e->getMessage());
+        }
+
+        try {
+            $bills->clearVariance($bill->id, 'ok', $approver);
             $this->fail('A cleared variance must carry a written reason.');
         } catch (ValidationException $e) {
             $this->assertStringContainsString('sentence', $e->validator->errors()->first());
@@ -173,11 +183,11 @@ class ThreeWayMatchTest extends TestCase
         $cleared = $bills->clearVariance(
             $bill->id,
             'Vendor added transport and loading charges agreed verbally with the purchase officer.',
-            $accounts,
+            $approver,
         );
 
         $this->assertSame(MatchStatus::VARIANCE_CLEARED, $cleared->match_status);
-        $this->assertSame($accounts->id, $cleared->cleared_by_id);
+        $this->assertSame($approver->id, $cleared->cleared_by_id);
 
         // Nothing is erased.
         $this->assertSame('60000.00', (string) $cleared->approved_amount);

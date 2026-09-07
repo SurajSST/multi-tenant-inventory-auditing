@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Bills;
 
+use App\Models\PurchaseOrder;
 use App\Models\Vendor;
 use App\Services\BillService;
 use App\Support\Money;
@@ -13,9 +14,7 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 
 /**
- * Entering a bill. A bill cannot be entered before the goods have been verified
- * as received, and the same bill number can never appear twice anywhere in the
- * system — that is what blocks the double claim.
+ * Entering a bill with line items and true line-level 3-way matching.
  */
 class Create extends Component
 {
@@ -36,11 +35,16 @@ class Create extends Component
 
     public string $vendorName = '';
 
+    public array $billLines = [];
+
     public $scan;
 
     public function mount(): void
     {
         $this->billDate = now()->toDateString();
+        if ($this->purchaseOrderId) {
+            $this->updatedPurchaseOrderId();
+        }
     }
 
     #[Computed]
@@ -52,7 +56,12 @@ class Create extends Component
     #[Computed]
     public function order(): ?object
     {
-        return $this->purchaseOrderId ? $this->awaiting->firstWhere('id', $this->purchaseOrderId) : null;
+        if (! $this->purchaseOrderId) {
+            return null;
+        }
+
+        return $this->awaiting->firstWhere('id', $this->purchaseOrderId)
+            ?: PurchaseOrder::with(['demand.lines.itemType', 'lines.demandLine.itemType', 'vendor', 'receipts.lines', 'receipts.receivedBy'])->find($this->purchaseOrderId);
     }
 
     #[Computed]
@@ -65,21 +74,95 @@ class Create extends Component
     #[Computed]
     public function willMatch(): ?bool
     {
-        if (! $this->order || $this->billAmount === '') {
+        if (! $this->order || ! $this->billAmount || Money::lte($this->billAmount, 0)) {
             return null;
         }
 
-        return Money::eq($this->billAmount, $this->order->order_amount)
-            && Money::lte($this->billAmount, $this->order->demand->total_amount);
+        // Must match accepted received value
+        $receivedTotal = '0.00';
+        if ($this->order->lines && $this->order->lines->isNotEmpty()) {
+            foreach ($this->order->lines as $pLine) {
+                $receivedTotal = Money::add($receivedTotal, Money::mul($pLine->unit_price, $pLine->totalReceivedQty()));
+            }
+        } elseif ($this->order->demand) {
+            foreach ($this->order->demand->lines as $dLine) {
+                $receivedTotal = Money::add($receivedTotal, Money::mul($dLine->unit_rate, $dLine->totalReceivedQty()));
+            }
+        }
+
+        return Money::eq($this->billAmount, $receivedTotal)
+            && ($this->order->demand ? Money::lte($this->billAmount, $this->order->demand->total_amount) : true);
     }
 
     public function updatedPurchaseOrderId(): void
     {
         unset($this->order);
+        $this->billLines = [];
 
         if ($this->order) {
-            $this->billAmount = (string) $this->order->order_amount;
+            $this->vendorId = $this->order->vendor_id;
+            $total = '0.00';
+            $poLines = $this->order->lines;
+            if ($poLines && $poLines->isNotEmpty()) {
+                foreach ($poLines as $pLine) {
+                    $recQty = $pLine->totalReceivedQty();
+                    if ($recQty > 0) {
+                        $this->billLines[] = [
+                            'purchase_order_line_id' => $pLine->id,
+                            'item_type_id' => $pLine->item_type_id,
+                            'description' => $pLine->description,
+                            'received_qty' => $recQty,
+                            'po_unit_price' => (string) $pLine->unit_price,
+                            'quantity' => $recQty,
+                            'unit_price' => (string) $pLine->unit_price,
+                            'discount' => '0.00',
+                            'tax' => '0.00',
+                        ];
+                        $total = Money::add($total, Money::mul($pLine->unit_price, $recQty));
+                    }
+                }
+            } elseif ($this->order->demand && $this->order->demand->lines->isNotEmpty()) {
+                foreach ($this->order->demand->lines as $dLine) {
+                    $recQty = $dLine->totalReceivedQty();
+                    if ($recQty > 0) {
+                        $this->billLines[] = [
+                            'purchase_order_line_id' => null,
+                            'item_type_id' => $dLine->item_type_id,
+                            'description' => $dLine->item_name,
+                            'received_qty' => $recQty,
+                            'po_unit_price' => (string) $dLine->unit_rate,
+                            'quantity' => $recQty,
+                            'unit_price' => (string) $dLine->unit_rate,
+                            'discount' => '0.00',
+                            'tax' => '0.00',
+                        ];
+                        $total = Money::add($total, Money::mul($dLine->unit_rate, $recQty));
+                    }
+                }
+            }
+            $this->billAmount = $total;
         }
+    }
+
+    public function updatedBillLines(): void
+    {
+        $this->recalculateBillAmount();
+    }
+
+    public function recalculateBillAmount(): void
+    {
+        $total = '0.00';
+        foreach ($this->billLines as $l) {
+            $qty = (int) ($l['quantity'] ?? 0);
+            $rate = Money::of($l['unit_price'] ?? 0);
+            $disc = Money::of($l['discount'] ?? 0);
+            $tax = Money::of($l['tax'] ?? 0);
+            if ($qty > 0) {
+                $sub = Money::add(Money::sub(Money::mul($rate, $qty), $disc), $tax);
+                $total = Money::add($total, $sub);
+            }
+        }
+        $this->billAmount = $total;
     }
 
     public function save(BillService $bills): void
@@ -92,6 +175,8 @@ class Create extends Component
             'billAmount' => ['required', 'numeric', 'gt:0'],
             'vatAmount' => ['nullable', 'numeric', 'min:0'],
             'vendorName' => ['required_without_all:vendorId,purchaseOrderId', 'nullable', 'string', 'max:180'],
+            'billLines.*.quantity' => ['required', 'integer', 'min:1'],
+            'billLines.*.unit_price' => ['required', 'numeric', 'min:0'],
             'scan' => ['nullable', 'file', 'max:'.config('prativa.attachments.max_kb'),
                 'mimes:'.implode(',', config('prativa.attachments.mimes'))],
         ], [
@@ -112,10 +197,11 @@ class Create extends Component
             'bill_amount' => $this->billAmount,
             'vat_amount' => $this->vatAmount ?: 0,
             'attachment_path' => $path,
+            'lines' => $this->billLines,
         ], auth()->user());
 
         session()->flash('status', $bill->isFlagged()
-            ? "Bill {$bill->bill_no} is entered but FLAGGED: it does not agree with the order. It stays flagged until it is cleared in writing."
+            ? "Bill {$bill->bill_no} is entered but FLAGGED: it does not agree with the order/receipts. It stays flagged until it is cleared in writing."
             : "Bill {$bill->bill_no} is entered and matches the order and the approval.");
 
         $this->redirectRoute('bills.index', navigate: true);

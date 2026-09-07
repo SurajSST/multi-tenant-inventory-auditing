@@ -29,6 +29,8 @@ class Schools extends Component
 {
     use WithFileUploads;
 
+    public string $search = '';
+
     public bool $showForm = false;
 
     public ?string $editingTenantId = null;
@@ -196,9 +198,12 @@ class Schools extends Component
             detail: "{$tenant->name} was set up, administered by {$this->adminName} ({$this->adminEmail})",
         );
 
-        session()->flash('status', "{$tenant->name} is set up"
+        $msg = "{$tenant->name} is set up"
             .($this->withCatalogue ? ' with the standard catalogue' : ' with an empty register')
-            .". {$this->adminName} can sign in with the default password and will be made to change it.");
+            .". {$this->adminName} can sign in with the default password and will be made to change it.";
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: 'School Created');
 
         $this->cancel();
     }
@@ -241,7 +246,9 @@ class Schools extends Component
             after: $tenant->only(['name', 'slug', 'short_name', 'address', 'logo_url']),
         );
 
-        session()->flash('status', "{$tenant->name} details updated successfully.");
+        $msg = "{$tenant->name} details updated successfully.";
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: 'School Updated');
 
         $this->cancel();
     }
@@ -258,9 +265,12 @@ class Schools extends Component
             detail: $tenant->name.' was '.($tenant->is_active ? 'resumed' : 'suspended'),
         );
 
-        session()->flash('status', $tenant->is_active
+        $msg = $tenant->is_active
             ? $tenant->name.' is active again.'
-            : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.');
+            : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.';
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $tenant->is_active ? 'ok' : 'warn', title: 'School Status');
     }
 
     /** Drop into a school and work in it as the console operator. */
@@ -329,8 +339,20 @@ class Schools extends Component
 
     public function render(): View
     {
+        $schools = $this->summary();
+
+        if ($this->search) {
+            $needle = strtolower(trim($this->search));
+            $schools = $schools->filter(function ($s) use ($needle) {
+                return str_contains(strtolower($s->name ?? ''), $needle)
+                    || str_contains(strtolower($s->slug ?? ''), $needle)
+                    || str_contains(strtolower($s->short_name ?? ''), $needle)
+                    || str_contains(strtolower($s->address ?? ''), $needle);
+            })->values();
+        }
+
         return view('livewire.platform.schools', [
-            'schools' => $this->summary(),
+            'schools' => $schools,
             'stats' => $this->globalStats,
             'recentActivity' => $this->recentActivity,
         ])->title('Schools · Platform Console');

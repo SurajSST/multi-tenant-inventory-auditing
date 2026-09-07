@@ -44,10 +44,13 @@
                 ['Demand Forms', 'demands.index', 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8', true, 0, 'Demands'],
                 ['Approvals Queue', 'demands.queue', 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10ZM9 12l2 2 4-4', $user?->approval_tier > 0, $pendingApprovalsCount, 'Approve'],
                 ['Orders & Receipts', 'orders.index', 'M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2M15 18H9M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z', true, 0, 'Orders'],
+                ['Supplier Returns', 'supplier-returns.index', 'M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3', true, 0, 'Returns'],
                 ['Bills & 3-Way Match', 'bills.index', 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1ZM16 8H8M16 12H8M13 16H8', $user?->can('handle-accounts'), 0, 'Bills'],
             ],
             'Treasury' => [
                 ['Petty Cash Tokens', 'petty-cash.index', 'M8 14a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM18.09 10.37A6 6 0 1 1 10.34 18M7 6h1v4M16.71 13.88l.7.71-2.82 2.82', $user?->can('handle-accounts'), 0, 'Tokens'],
+                ['Disbursements', 'payments.index', 'M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6H2.25m0 0v1.5c0 .414.336.75.75.75H3m0-2.25h1.5m0 0v1.5m0-1.5h15m-15 0a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 21h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15Z', $user?->can('handle-accounts'), 0, 'Payments'],
+                ['Trial Balance', 'accounting.trial-balance', 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z', $user?->can('handle-accounts'), 0, 'Accounts'],
             ],
             'Governance' => [
                 ['Settings & Roles', 'setup.index', 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2ZM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z', $user?->can('manage-setup'), 0, 'Setup'],
@@ -248,7 +251,8 @@
                                     'inventory.variance' => request()->routeIs('inventory.variance*'),
                                     'demands.queue' => request()->routeIs('demands.queue*'),
                                     'demands.index' => (request()->routeIs('demands.*') && !request()->routeIs('demands.queue*')),
-                                    'orders.index' => request()->routeIs('orders.*'),
+                                    'orders.index' => (request()->routeIs('orders.*') && !request()->routeIs('orders.return')),
+                                    'supplier-returns.index' => (request()->routeIs('supplier-returns.*') || request()->routeIs('orders.return')),
                                     'bills.index' => request()->routeIs('bills.*'),
                                     'petty-cash.index' => request()->routeIs('petty-cash.*'),
                                     'setup.index' => request()->routeIs('setup.*'),
@@ -409,6 +413,14 @@
 
             {{-- Right: Search, Theme Toggle, Notification Bell, User Menu Dropdown --}}
             <div class="flex items-center gap-2.5">
+                {{-- Bikram Sambat (BS) Today's Date Badge --}}
+                <div class="hidden sm:flex items-center gap-2 rounded-lg border border-slate-200/90 bg-slate-50/90 px-2.5 py-1 text-xs text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 cursor-help" title="{{ now()->format('l, F j, Y') }} AD (Bikram Sambat Calendar)">
+                    <svg class="size-3.5 text-sky-600 dark:text-sky-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span class="font-mono font-medium text-slate-800 dark:text-slate-200">{{ \App\Support\NepaliDate::format(now()) }} BS</span>
+                </div>
+
                 <button type="button" @click="cmdk = true"
                         class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12.5px] font-medium text-slate-500 transition hover:border-slate-300 hover:text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10">
                     <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

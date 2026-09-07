@@ -15,6 +15,9 @@ use Livewire\Component;
 class Variance extends Component
 {
     #[Url(except: '')]
+    public string $search = '';
+
+    #[Url(except: '')]
     public string $locationId = '';
 
     #[Url(except: false)]
@@ -26,6 +29,15 @@ class Variance extends Component
 
         if ($this->onlyDiscrepancies) {
             $rows = $rows->filter(fn ($r) => (int) $r->variance !== 0)->values();
+        }
+
+        if ($this->search) {
+            $needle = strtolower(trim($this->search));
+            $rows = $rows->filter(function ($r) use ($needle) {
+                return str_contains(strtolower($r->item_name ?? ''), $needle)
+                    || str_contains(strtolower($r->category_name ?? ''), $needle)
+                    || str_contains(strtolower($r->location_name ?? ''), $needle);
+            })->values();
         }
 
         return view('livewire.inventory.variance', [

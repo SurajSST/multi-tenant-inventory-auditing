@@ -19,7 +19,11 @@
     </x-page-header>
 
     <x-card class="mb-5 no-print">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4 sm:grid-cols-3">
+            <x-field label="Search" for="search">
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Search item, category, block..." />
+            </x-field>
+
             <x-field label="Block" for="locationId">
                 <x-select id="locationId" wire:model.live="locationId">
                     <option value="">Every block</option>

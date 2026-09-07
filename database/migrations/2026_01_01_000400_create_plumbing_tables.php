@@ -9,13 +9,8 @@ return new class extends Migration
     public function up(): void
     {
         // Settings are per school: the petty cash ceiling and the school's own
-        // name are exactly the kind of thing that differs between them. The key
-        // alone is therefore not enough to identify a row.
+        // name are exactly the kind of thing that differs between them.
         Schema::create('app_settings', function (Blueprint $table) {
-            // A surrogate id rather than a composite (tenant_id, key) primary
-            // key: Eloquent builds its UPDATE from the primary key alone and
-            // does not apply global scopes to save queries, so a composite key
-            // it cannot see would have let one school's save rewrite them all.
             $table->uuid('id')->primary();
             $table->foreignUuid('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->string('key');
@@ -46,6 +41,9 @@ return new class extends Migration
             $table->index(['tenant_id', 'entity', 'entity_id']);
             $table->index(['tenant_id', 'actor_id', 'at'], 'idx_audit_actor_at');
             $table->index(['tenant_id', 'action']);
+            $table->index(['at'], 'idx_audit_at');
+            $table->index(['action', 'at'], 'idx_audit_action_at');
+            $table->index(['entity', 'at'], 'idx_audit_entity_at');
         });
 
         // Per-school, per-fiscal-year counters for DF / PO / PC references,

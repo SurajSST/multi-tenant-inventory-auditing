@@ -21,15 +21,17 @@ class ExportController extends Controller
         private AuditLogger $audit,
     ) {}
 
-    public function stockRegister(InventoryService $inventory): StreamedResponse
+    public function stockRegister(Request $request, InventoryService $inventory): StreamedResponse
     {
+        abort_unless($request->user()->seesEverything() || $request->user()->can('enter-counts') || $request->user()->can('receive-goods'), 403);
         $this->log('stock register');
 
         return (new StockRegisterExport($this->settings, $inventory))->download();
     }
 
-    public function unitList(InventoryService $inventory): StreamedResponse
+    public function unitList(Request $request, InventoryService $inventory): StreamedResponse
     {
+        abort_unless($request->user()->seesEverything() || $request->user()->can('enter-counts') || $request->user()->can('receive-goods'), 403);
         $this->log('unit list');
 
         return (new UnitListExport($this->settings, $inventory))->download();

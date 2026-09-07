@@ -13,9 +13,8 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Placing the order. Ordering above the approved amount is allowed but never
- * silent: it is flagged here, written into the audit trail, and the bill will
- * not match until Accounts accepts the difference in writing.
+ * Placing the order. Supports splitting demands across multiple purchase orders
+ * and suppliers. Ordering above the approved amount is checked against system policy.
  */
 class Create extends Component
 {
@@ -33,6 +32,15 @@ class Create extends Component
     public string $expectedDate = '';
 
     public string $note = '';
+
+    public array $orderLines = [];
+
+    public function mount(): void
+    {
+        if ($this->demandId) {
+            $this->updatedDemandId();
+        }
+    }
 
     #[Computed]
     public function awaiting(): Collection
@@ -68,10 +76,43 @@ class Create extends Component
     public function updatedDemandId(): void
     {
         unset($this->demand);
+        $this->orderLines = [];
 
         if ($this->demand) {
-            $this->orderAmount = (string) $this->demand->total_amount;
+            foreach ($this->demand->lines as $line) {
+                $rem = $line->remainingToOrderQty();
+                if ($rem > 0) {
+                    $this->orderLines[] = [
+                        'demand_line_id' => $line->id,
+                        'item_name' => $line->item_name,
+                        'specification' => $line->specification,
+                        'approved_qty' => $line->quantity,
+                        'remaining_qty' => $rem,
+                        'quantity_ordered' => $rem,
+                        'unit_price' => (string) $line->unit_rate,
+                    ];
+                }
+            }
+            $this->recalculateOrderAmount();
         }
+    }
+
+    public function updatedOrderLines(): void
+    {
+        $this->recalculateOrderAmount();
+    }
+
+    public function recalculateOrderAmount(): void
+    {
+        $total = '0.00';
+        foreach ($this->orderLines as $l) {
+            $qty = (int) ($l['quantity_ordered'] ?? 0);
+            $rate = Money::of($l['unit_price'] ?? 0);
+            if ($qty > 0) {
+                $total = Money::add($total, Money::mul($rate, $qty));
+            }
+        }
+        $this->orderAmount = $total;
     }
 
     public function save(OrderService $orders): void
@@ -84,6 +125,8 @@ class Create extends Component
             'orderAmount' => ['required', 'numeric', 'gt:0'],
             'expectedDate' => ['nullable', 'date'],
             'note' => ['nullable', 'string', 'max:255'],
+            'orderLines.*.quantity_ordered' => ['required', 'integer', 'min:0'],
+            'orderLines.*.unit_price' => ['required', 'numeric', 'min:0'],
         ], [
             'vendorName.required_without' => 'Pick a vendor, or type a new one.',
         ]);
@@ -96,6 +139,7 @@ class Create extends Component
             'order_amount' => $this->orderAmount,
             'expected_date' => $this->expectedDate ?: null,
             'note' => $this->note ?: null,
+            'lines' => $this->orderLines,
         ], auth()->user());
 
         session()->flash('status', "{$order->ref} placed with {$order->vendor->name}. ".

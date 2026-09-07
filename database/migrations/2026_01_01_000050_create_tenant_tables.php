@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string('slug')->unique();       // "prativa"
             $table->string('short_name')->nullable();
             $table->string('address')->nullable();
+            $table->string('logo_url')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamp('created_at')->useCurrent();
 
@@ -52,6 +53,8 @@ return new class extends Migration
             // The target every composite foreign key below points at.
             $table->unique(['tenant_id', 'id'], 'uniq_membership_tenant_id');
             $table->index(['tenant_id', 'approval_tier']);
+            $table->index(['tenant_id', 'is_active']);
+            $table->index(['user_id', 'is_active']);
         });
 
         // Roles are held at a school, not by a person in the abstract.

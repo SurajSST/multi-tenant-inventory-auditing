@@ -20,7 +20,15 @@
                 </svg>
                 Download PDF
             </x-button>
-            <x-button variant="secondary" href="{{ route('export.procurement') }}">Export</x-button>
+            <x-button variant="secondary" href="{{ route('accounting.trial-balance') }}" wire:navigate>Trial Balance</x-button>
+            <x-button variant="secondary" href="{{ route('payments.index') }}" wire:navigate>Payments</x-button>
+            <x-button variant="secondary" wire:click="exportCsv">
+                <svg class="size-4 shrink-0 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.5V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Export CSV
+            </x-button>
+            <x-button variant="secondary" href="{{ route('bills.pay') }}" wire:navigate>Pay a bill</x-button>
             <x-button href="{{ route('bills.create') }}" wire:navigate>Enter a bill</x-button>
         </x-slot:actions>
     </x-page-header>
@@ -35,8 +43,7 @@
                         <div class="min-w-0">
                             <p class="text-sm font-medium text-slate-900 dark:text-slate-100">{{ $order->ref }} · {{ $order->vendor->name }}</p>
                             <p class="text-xs text-slate-500 dark:text-slate-500">
-                                Verified by {{ $order->receipt->receivedBy->full_name }},
-                                {{ $order->receipt->received_at->format('d M Y') }}
+                                Verified by {{ $order->receipt?->receivedBy?->full_name ?? 'Receiving Officer' }}@if ($order->receipt?->received_at), {{ $order->receipt->received_at->format('d M Y') }}@endif
                             </p>
                         </div>
                         <div class="flex items-center gap-3">
@@ -52,14 +59,20 @@
     @endif
 
     <x-card class="mb-5 no-print">
-        <x-field label="Match status" for="status" class="max-w-xs">
-            <x-select id="status" wire:model.live="status">
-                <option value="">Every bill</option>
-                @foreach (\App\Enums\MatchStatus::cases() as $case)
-                    <option value="{{ $case->value }}">{{ $case->label() }}</option>
-                @endforeach
-            </x-select>
-        </x-field>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <x-field label="Search" for="search">
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Search bill no, vendor, PO ref, entered by..." />
+            </x-field>
+
+            <x-field label="Match status" for="status">
+                <x-select id="status" wire:model.live="status">
+                    <option value="">Every bill</option>
+                    @foreach (\App\Enums\MatchStatus::cases() as $case)
+                        <option value="{{ $case->value }}">{{ $case->label() }}</option>
+                    @endforeach
+                </x-select>
+            </x-field>
+        </div>
     </x-card>
 
     <x-card :flush="true" title="{{ $bills->total() }} bill{{ $bills->total() === 1 ? '' : 's' }}">
@@ -77,7 +90,8 @@
                             <th scope="col" class="px-4 py-2.5 text-right font-medium">Ordered</th>
                             <th scope="col" class="px-4 py-2.5 text-right font-medium">Billed</th>
                             <th scope="col" class="px-4 py-2.5 text-right font-medium">Difference</th>
-                            <th scope="col" class="px-4 py-2.5 font-medium">Status</th>
+                            <th scope="col" class="px-4 py-2.5 font-medium">Match</th>
+                            <th scope="col" class="px-4 py-2.5 font-medium">Payment</th>
                             <th scope="col" class="px-5 py-2.5 font-medium">Entered by</th>
                         </tr>
                     </thead>
@@ -131,9 +145,27 @@
                                         </span>
                                     @endif
                                 </td>
+                                <td class="px-4 py-2.5">
+                                    @if ($bill->payment_status === 'PAID')
+                                        <span class="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">Paid</span>
+                                    @elseif ($bill->payment_status === 'PART_PAID')
+                                        <span class="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/10 dark:text-sky-400">Part-Paid</span>
+                                        <span class="block text-[11px] text-slate-500">Rem: {{ \App\Support\Money::npr($bill->remainingBalance()) }}</span>
+                                        @if ($bill->match_status !== \App\Enums\MatchStatus::MISMATCH)
+                                            <a href="{{ route('bills.pay', ['billId' => $bill->id]) }}" wire:navigate class="no-print text-xs text-indigo-600 hover:text-indigo-500 dark:text-sky-400 font-medium">Pay balance</a>
+                                        @endif
+                                    @else
+                                        <span class="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-white/10 dark:text-slate-400">Unpaid</span>
+                                        @if ($bill->match_status !== \App\Enums\MatchStatus::MISMATCH)
+                                            <a href="{{ route('bills.pay', ['billId' => $bill->id]) }}" wire:navigate class="no-print block mt-0.5 text-xs text-indigo-600 hover:text-indigo-500 dark:text-sky-400 font-medium">Pay</a>
+                                        @endif
+                                    @endif
+                                </td>
                                 <td class="px-5 py-2.5 text-xs text-slate-500 dark:text-slate-500">
                                     {{ $bill->enteredBy->full_name }}
-                                    <span class="block text-slate-400 dark:text-slate-600">{{ $bill->entered_at->format('d M Y') }}</span>
+                                    <span class="block text-slate-400 dark:text-slate-600">
+                                        <x-bs-date :date="$bill->entered_at" />
+                                    </span>
                                     @if ($bill->attachment_path)
                                         <a href="{{ URL::signedRoute('attachments.show', ['path' => $bill->attachment_path]) }}"
                                            target="_blank" class="no-print font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">Scan</a>

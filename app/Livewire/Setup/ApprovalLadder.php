@@ -97,7 +97,9 @@ class ApprovalLadder extends Component
 
         $this->load($settings);
 
-        session()->flash('status', 'The approval ladder has been updated. It applies to demand forms raised from now on.');
+        $msg = 'The approval ladder has been updated. It applies to demand forms raised from now on.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'ok', title: 'Approval Ladder Updated');
     }
 
     public function render(): View
