@@ -54,7 +54,7 @@ class IntegrityRules
                BEFORE INSERT ON goods_receipts
                FOR EACH ROW
              BEGIN
-               DECLARE real_orderer CHAR(36) DEFAULT NULL;
+               DECLARE real_orderer CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
                SELECT ordered_by_id INTO real_orderer
                  FROM purchase_orders WHERE id = NEW.purchase_order_id;
                IF real_orderer IS NULL THEN
@@ -75,7 +75,7 @@ class IntegrityRules
                BEFORE UPDATE ON goods_receipts
                FOR EACH ROW
              BEGIN
-               DECLARE real_orderer CHAR(36) DEFAULT NULL;
+               DECLARE real_orderer CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
                SELECT ordered_by_id INTO real_orderer
                  FROM purchase_orders WHERE id = NEW.purchase_order_id;
                IF real_orderer IS NULL OR NEW.ordered_by_id <> real_orderer
@@ -113,7 +113,7 @@ class IntegrityRules
                BEFORE INSERT ON demand_approvals
                FOR EACH ROW
              BEGIN
-               DECLARE requester CHAR(36) DEFAULT NULL;
+               DECLARE requester CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
                SELECT raised_by_id INTO requester FROM demand_forms WHERE id = NEW.demand_id;
                IF requester = NEW.actor_id THEN
                  SIGNAL SQLSTATE '45000'
