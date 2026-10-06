@@ -337,8 +337,13 @@ class Staff extends Component
             );
         });
 
+        $msg = $isNewPosting
+            ? $this->fullName.' can now work at this school.'
+            : $this->fullName.' updated.';
+
+        session()->flash('status', $msg);
         $this->dispatch('toast',
-            message: $isNewPosting ? $this->fullName.' can now work at this school.' : $this->fullName.' updated.',
+            message: $msg,
             tone: 'success',
             title: $isNewPosting ? 'Staff member added' : 'Staff member updated',
         );
@@ -353,6 +358,7 @@ class Staff extends Component
 
         if ($membership->user_id === auth()->id()) {
             $this->addError('staff', 'You cannot stand yourself down from your own school.');
+            $this->dispatch('toast', message: 'You cannot stand yourself down from your own school.', tone: 'danger', title: 'Action Denied');
 
             return;
         }
@@ -367,10 +373,13 @@ class Staff extends Component
                 .($membership->is_active ? 'reinstated at' : 'stood down from').' this school',
         );
 
+        $msg = $membership->is_active
+            ? $membership->user->full_name.' can work here again.'
+            : $membership->user->full_name.' no longer works here. Their account at any other school is untouched.';
+
+        session()->flash('status', $msg);
         $this->dispatch('toast',
-            message: $membership->is_active
-                ? $membership->user->full_name.' can work here again.'
-                : $membership->user->full_name.' no longer works here. Their account at any other school is untouched.',
+            message: $msg,
             tone: $membership->is_active ? 'success' : 'warning',
             title: $membership->is_active ? 'Staff member reinstated' : 'Staff member stood down',
         );
@@ -393,12 +402,15 @@ class Staff extends Component
             detail: $person->full_name."'s password was reset by ".auth()->user()->full_name,
         );
 
+        $msg = $person->full_name.
+            ' has been reset to the default password and must change it on next sign-in.'.
+            ($person->memberships()->count() > 1
+                ? ' This is their login everywhere, so it applies at every school they work at.'
+                : '');
+
+        session()->flash('status', $msg);
         $this->dispatch('toast',
-            message: $person->full_name.
-                ' has been reset to the default password and must change it on next sign-in.'.
-                ($person->memberships()->count() > 1
-                    ? ' This is their login everywhere, so it applies at every school they work at.'
-                    : ''),
+            message: $msg,
             tone: 'success',
             title: 'Password reset',
         );
@@ -413,11 +425,16 @@ class Staff extends Component
             'staff' => TenantUser::query()
                 ->where('tenant_id', app(TenantContext::class)->idOrFail())
                 ->with(['user', 'roleRows', 'auditScopes.location'])
-                ->when($this->search, fn ($query) => $query->where(fn ($q) => $q
-                    ->where('staff_code', 'like', '%'.$this->search.'%')
-                    ->orWhereHas('user', fn ($user) => $user
-                        ->where('full_name', 'like', '%'.$this->search.'%')
-                        ->orWhere('email', 'like', '%'.$this->search.'%'))))
+                ->when($this->search, function ($q, $search) {
+                    $search = trim($search);
+                    $q->where(function ($sub) use ($search) {
+                        $sub->where('staff_code', 'like', "%{$search}%")
+                            ->orWhere('designation', 'like', "%{$search}%")
+                            ->orWhereHas('user', fn ($u) => $u->where('full_name', 'like', "%{$search}%")
+                                ->orWhere('email', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%"));
+                    });
+                })
                 ->orderBy('staff_code')
                 ->paginate(25),
             'allRoles' => Role::cases(),

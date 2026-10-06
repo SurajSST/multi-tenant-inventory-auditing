@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         // tokens — land in append-only tables, so on a live database they could
         // never afterwards be removed. Gating on "not running tests" would have
         // been true in production.
-        $this->seedSchool($prativa, withDemoData: app()->environment('local'));
+        $this->seedSchool($prativa, withDemoData: false);
 
         // A second school, locally only. Isolation that cannot be seen is
         // isolation nobody checks — with two schools on screen, a leak between
@@ -48,6 +48,8 @@ class DatabaseSeeder extends Seeder
             );
 
             $this->seedSchool($everest, withDemoData: false);
+
+            $this->call(LargeScaleDataSeeder::class);
         }
 
         // The owner works at every school as well as above them, so their
@@ -91,6 +93,7 @@ class DatabaseSeeder extends Seeder
                 ApprovalTierSeeder::class,
                 SettingSeeder::class,
                 UserSeeder::class,
+                ChartOfAccountsSeeder::class,
                 OpeningBalanceSeeder::class,
             ]);
 

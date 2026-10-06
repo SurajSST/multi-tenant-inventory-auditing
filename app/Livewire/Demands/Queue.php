@@ -16,6 +16,8 @@ use Livewire\Component;
  */
 class Queue extends Component
 {
+    public string $search = '';
+
     public ?string $decidingId = null;
 
     public string $action = '';
@@ -41,7 +43,19 @@ class Queue extends Component
     public function updatedSelectAll(bool $value, DemandService $demands): void
     {
         if ($value) {
-            $this->selected = $demands->myQueue(auth()->user())
+            $queue = $demands->myQueue(auth()->user());
+            if ($this->search) {
+                $needle = strtolower(trim($this->search));
+                $queue = $queue->filter(function ($item) use ($needle) {
+                    return str_contains(strtolower($item->ref ?? ''), $needle)
+                        || str_contains(strtolower($item->department ?? ''), $needle)
+                        || str_contains(strtolower($item->justification ?? ''), $needle)
+                        || str_contains(strtolower($item->raisedBy?->full_name ?? ''), $needle)
+                        || $item->lines->contains(fn ($l) => str_contains(strtolower($l->item_name ?? ''), $needle));
+                });
+            }
+
+            $this->selected = $queue
                 ->pluck('id')
                 ->map(fn ($id) => (string) $id)
                 ->all();
@@ -95,10 +109,13 @@ class Queue extends Component
         $this->selectAll = false;
         $this->closeBulkModal();
 
+        $msg = $errors
+            ? "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors))
+            : "Successfully approved {$approvedCount} demand form(s).";
+
+        session()->flash('status', $msg);
         $this->dispatch('toast',
-            message: $errors
-                ? "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors))
-                : "Successfully approved {$approvedCount} demand form(s).",
+            message: $msg,
             tone: $errors ? 'warning' : 'success',
             title: $errors ? 'Approval completed with issues' : 'Approvals recorded',
         );
@@ -146,6 +163,7 @@ class Queue extends Component
                 }
             } else {
                 $this->addError('decision', $e->getMessage());
+                $this->dispatch('toast', message: $e->getMessage(), tone: 'danger', title: 'Approval Refused');
             }
 
             return;
@@ -159,13 +177,16 @@ class Queue extends Component
 
         $this->close();
 
-        $this->dispatch('toast',
-            message: $action === ApprovalAction::APPROVE
-                ? "{$demand->ref} approved. ".($demand->current_tier
+        $msg = $action === ApprovalAction::APPROVE
+            ? "{$demand->ref} approved. ".($demand->current_tier
                 ? "It now sits with tier {$demand->current_tier}."
                 : 'It is fully approved and ready for an order.')
-                : "{$demand->ref} rejected. The person who raised it can see your reason.",
-            tone: 'success',
+            : "{$demand->ref} rejected. The person who raised it can see your reason.";
+
+        session()->flash('status', $msg);
+        $this->dispatch('toast',
+            message: $msg,
+            tone: $action === ApprovalAction::APPROVE ? 'success' : 'warning',
             title: $action === ApprovalAction::APPROVE ? 'Approval recorded' : 'Demand rejected',
         );
     }
@@ -178,6 +199,17 @@ class Queue extends Component
         if ($this->decidingId) {
             $deciding = $queue->firstWhere('id', $this->decidingId)
                 ?? $demands->find($this->decidingId);
+        }
+
+        if ($this->search) {
+            $needle = strtolower(trim($this->search));
+            $queue = $queue->filter(function ($item) use ($needle) {
+                return str_contains(strtolower($item->ref ?? ''), $needle)
+                    || str_contains(strtolower($item->department ?? ''), $needle)
+                    || str_contains(strtolower($item->justification ?? ''), $needle)
+                    || str_contains(strtolower($item->raisedBy?->full_name ?? ''), $needle)
+                    || $item->lines->contains(fn ($l) => str_contains(strtolower($l->item_name ?? ''), $needle));
+            })->values();
         }
 
         return view('livewire.demands.queue', [

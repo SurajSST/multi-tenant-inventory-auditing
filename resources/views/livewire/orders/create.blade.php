@@ -26,31 +26,56 @@
                     </x-select>
                 </x-field>
 
-                @if ($this->demand)
+                @if ($this->demand && count($this->orderLines) > 0)
                     <div class="mt-5 rounded-lg border border-slate-200 dark:border-white/10">
-                        <div class="border-b border-slate-200 bg-slate-50 px-4 py-2.5 dark:border-white/10 dark:bg-white/5">
-                            <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">What was approved</p>
+                        <div class="border-b border-slate-200 bg-slate-50 px-4 py-2.5 dark:border-white/10 dark:bg-white/5 flex items-center justify-between">
+                            <p class="text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Items to Order (Split quantities supported)</p>
+                            <p class="text-xs text-slate-500">Approved Total: <x-money :amount="$this->demand->total_amount" :bare="true" class="font-semibold" /></p>
                         </div>
                         <table class="min-w-full divide-y divide-slate-100 text-sm dark:divide-white/5">
+                            <thead>
+                                <tr class="text-xs text-slate-500 uppercase bg-slate-50 dark:bg-white/5">
+                                    <th class="px-4 py-2 text-left">Item</th>
+                                    <th class="px-4 py-2 text-center">Remaining</th>
+                                    <th class="px-4 py-2 text-center w-32">Order Qty</th>
+                                    <th class="px-4 py-2 text-center w-36">Unit Rate (Rs.)</th>
+                                    <th class="px-4 py-2 text-right">Line Total</th>
+                                </tr>
+                            </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-white/5">
-                                @foreach ($this->demand->lines as $line)
+                                @foreach ($this->orderLines as $idx => $line)
                                     <tr>
                                         <td class="px-4 py-2 text-slate-900 dark:text-slate-100">
-                                            {{ $line->item_name }}
-                                            @if ($line->specification)
-                                                <span class="block text-xs text-slate-500 dark:text-slate-500">{{ $line->specification }}</span>
+                                            {{ $line['item_name'] }}
+                                            @if (! empty($line['specification']))
+                                                <span class="block text-xs text-slate-500 dark:text-slate-500">{{ $line['specification'] }}</span>
                                             @endif
                                         </td>
-                                        <td class="tnum px-4 py-2 text-right text-slate-600 dark:text-slate-400">{{ $line->quantity }} ×</td>
-                                        <td class="px-4 py-2 text-right"><x-money :amount="$line->unit_rate" :bare="true" class="text-slate-600 dark:text-slate-400" /></td>
-                                        <td class="px-4 py-2 text-right"><x-money :amount="$line->line_total" :bare="true" class="font-medium text-slate-900 dark:text-slate-100" /></td>
+                                        <td class="px-4 py-2 text-center text-slate-600 dark:text-slate-400">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-white/10">
+                                                {{ $line['remaining_qty'] }} of {{ $line['approved_qty'] }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <x-input type="number" min="0" max="{{ $line['remaining_qty'] }}"
+                                                     wire:model.live.debounce.300ms="orderLines.{{ $idx }}.quantity_ordered"
+                                                     class="tnum text-center text-sm py-1" />
+                                        </td>
+                                        <td class="px-4 py-2">
+                                            <x-input type="number" step="0.01" min="0"
+                                                     wire:model.live.debounce.300ms="orderLines.{{ $idx }}.unit_price"
+                                                     class="tnum text-right text-sm py-1" />
+                                        </td>
+                                        <td class="px-4 py-2 text-right font-medium text-slate-900 dark:text-slate-100">
+                                            {{ \App\Support\Money::npr(\App\Support\Money::mul($line['unit_price'] ?: 0, $line['quantity_ordered'] ?: 0)) }}
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                             <tfoot class="bg-slate-50 dark:bg-white/5">
                                 <tr>
-                                    <td colspan="3" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Approved total</td>
-                                    <td class="px-4 py-2 text-right"><x-money :amount="$this->demand->total_amount" :bare="true" class="text-sm font-semibold text-slate-900 dark:text-slate-100" /></td>
+                                    <td colspan="4" class="px-4 py-2 text-right text-xs font-medium uppercase tracking-wide text-slate-500 dark:text-slate-500">Order subtotal</td>
+                                    <td class="px-4 py-2 text-right"><x-money :amount="$this->orderAmount" :bare="true" class="text-sm font-semibold text-slate-900 dark:text-slate-100" /></td>
                                 </tr>
                             </tfoot>
                         </table>

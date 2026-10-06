@@ -9,6 +9,7 @@ use Illuminate\View\View;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * The full trail. Append-only at the database level, so nothing here has ever
@@ -98,5 +99,51 @@ class Index extends Component
                 : collect([$user]),
             'entities' => $entities,
         ])->title($canViewAll ? 'Audit Trail' : 'My Activity Trail');
+    }
+
+    public function exportCsv(): StreamedResponse
+    {
+        $user = auth()->user();
+        $canViewAll = $user->canViewAllAuditTrail();
+        $actorId = (! $canViewAll) ? $user->id : $this->actorId;
+        $search = $this->search;
+
+        $query = AuditLog::with(['actor', 'actor.currentMembership'])
+            ->when(! $canViewAll, fn ($q) => $q->where('actor_id', $user->id))
+            ->when($canViewAll && $actorId, fn ($q) => $q->where('actor_id', $actorId))
+            ->when($this->entity, fn ($q) => $q->where('entity', $this->entity))
+            ->when($search, fn ($q) => $q->where(function ($w) use ($search) {
+                $w->where('detail', 'like', '%'.$search.'%')
+                    ->orWhere('action', 'like', '%'.$search.'%');
+            }))
+            ->when($this->from, fn ($q) => $q->where('at', '>=', $this->from.' 00:00:00'))
+            ->when($this->to, fn ($q) => $q->where('at', '<=', $this->to.' 23:59:59'))
+            ->orderByDesc('at')
+            ->orderByDesc('id')
+            ->limit(5000);
+
+        $fileName = 'audit_trail_'.now()->format('Y_m_d_His').'.csv';
+
+        return response()->streamDownload(function () use ($query) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Timestamp', 'Actor Name', 'Designation', 'Action', 'Entity', 'Entity ID', 'Detail', 'IP Address']);
+
+            $query->chunk(500, function ($entries) use ($handle) {
+                foreach ($entries as $e) {
+                    fputcsv($handle, [
+                        $e->at?->toIso8601String() ?? '',
+                        $e->actor?->full_name ?? 'System',
+                        $e->actor?->currentMembership?->designation ?? '',
+                        $e->action,
+                        $e->entity,
+                        $e->entity_id ?? '',
+                        $e->detail,
+                        $e->ip ?? '',
+                    ]);
+                }
+            });
+
+            fclose($handle);
+        }, $fileName, ['Content-Type' => 'text/csv']);
     }
 }

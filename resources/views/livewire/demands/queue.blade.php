@@ -11,29 +11,42 @@
             <x-empty title="You are not on the approval chain"
                      note="The Super Admin sets which tier each approver decides at, under Setup → Staff." />
         </x-card>
-    @elseif ($queue->isEmpty())
+    @elseif ($queue->isEmpty() && ! $search)
         <x-card>
             <x-empty title="Nothing is waiting on you"
                      note="When a demand form reaches your band it appears here, and nothing moves until you decide." />
         </x-card>
     @else
-        @if ($queue->count() > 1)
-            <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-xs dark:border-white/10 dark:bg-slate-900">
-                <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                    <input type="checkbox" wire:model.live="selectAll"
-                           class="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:text-sky-400" />
-                    Select all {{ $queue->count() }} demands
-                </label>
-
-                @if (! empty($selected))
-                    <div class="flex items-center gap-2.5">
-                        <span class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ count($selected) }} selected</span>
-                        <x-button wire:click="openBulkModal" class="!py-1.5 !text-xs">
-                            Approve Selected ({{ count($selected) }})
-                        </x-button>
-                    </div>
-                @endif
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div class="w-full max-w-sm">
+                <x-input type="search" wire:model.live.debounce.300ms="search" placeholder="Search ref, department, requester, item..." />
             </div>
+
+            @if ($queue->count() > 1)
+                <div class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2 shadow-xs dark:border-white/10 dark:bg-slate-900">
+                    <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input type="checkbox" wire:model.live="selectAll"
+                               class="size-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:text-sky-400" />
+                        Select all {{ $queue->count() }} demands
+                    </label>
+
+                    @if (! empty($selected))
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ count($selected) }} selected</span>
+                            <x-button wire:click="openBulkModal" class="!py-1.5 !text-xs">
+                                Approve Selected ({{ count($selected) }})
+                            </x-button>
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
+
+        @if ($queue->isEmpty())
+            <x-card>
+                <x-empty title="No matching requests"
+                         note="Try adjusting your search terms or clearing the search filter." />
+            </x-card>
         @endif
 
         <div class="space-y-5">

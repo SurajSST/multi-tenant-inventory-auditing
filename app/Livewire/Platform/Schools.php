@@ -29,6 +29,8 @@ class Schools extends Component
 {
     use WithFileUploads;
 
+    public string $search = '';
+
     public bool $showForm = false;
 
     public ?string $editingTenantId = null;
@@ -196,8 +198,11 @@ class Schools extends Component
             detail: "{$tenant->name} was set up, administered by {$this->adminName} ({$this->adminEmail})",
         );
 
+        $msg = "{$tenant->name} is set up".($this->withCatalogue ? ' with the standard catalogue' : ' with an empty register').". {$this->adminName} can sign in with the default password and will be made to change it.";
+
+        session()->flash('status', $msg);
         $this->dispatch('toast',
-            message: "{$tenant->name} is set up".($this->withCatalogue ? ' with the standard catalogue' : ' with an empty register').". {$this->adminName} can sign in with the default password and will be made to change it.",
+            message: $msg,
             tone: 'success',
             title: 'School created',
         );
@@ -243,7 +248,9 @@ class Schools extends Component
             after: $tenant->only(['name', 'slug', 'short_name', 'address', 'logo_url']),
         );
 
-        $this->dispatch('toast', message: "{$tenant->name} details updated successfully.", tone: 'success', title: 'School details updated');
+        $msg = "{$tenant->name} details updated successfully.";
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'success', title: 'School details updated');
 
         $this->cancel();
     }
@@ -260,10 +267,13 @@ class Schools extends Component
             detail: $tenant->name.' was '.($tenant->is_active ? 'resumed' : 'suspended'),
         );
 
+        $msg = $tenant->is_active
+            ? $tenant->name.' is active again.'
+            : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.';
+
+        session()->flash('status', $msg);
         $this->dispatch('toast',
-            message: $tenant->is_active
-                ? $tenant->name.' is active again.'
-                : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.',
+            message: $msg,
             tone: $tenant->is_active ? 'success' : 'warning',
             title: $tenant->is_active ? 'School resumed' : 'School suspended',
         );
@@ -335,8 +345,20 @@ class Schools extends Component
 
     public function render(): View
     {
+        $schools = $this->summary();
+
+        if ($this->search) {
+            $needle = strtolower(trim($this->search));
+            $schools = $schools->filter(function ($s) use ($needle) {
+                return str_contains(strtolower($s->name ?? ''), $needle)
+                    || str_contains(strtolower($s->slug ?? ''), $needle)
+                    || str_contains(strtolower($s->short_name ?? ''), $needle)
+                    || str_contains(strtolower($s->address ?? ''), $needle);
+            })->values();
+        }
+
         return view('livewire.platform.schools', [
-            'schools' => $this->summary(),
+            'schools' => $schools,
             'stats' => $this->globalStats,
             'recentActivity' => $this->recentActivity,
         ])->title('Schools · Platform Console');

@@ -48,14 +48,20 @@
     </div>
 
     <x-card class="mb-5">
-        <x-field label="Status" for="status" class="max-w-xs">
-            <x-select id="status" wire:model.live="status">
-                <option value="">Every token</option>
-                @foreach (\App\Enums\TokenStatus::cases() as $case)
-                    <option value="{{ $case->value }}">{{ $case->label() }}</option>
-                @endforeach
-            </x-select>
-        </x-field>
+        <div class="grid gap-4 sm:grid-cols-2">
+            <x-field label="Search" for="search">
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Search serial, bill no, vendor, claimant, purpose..." />
+            </x-field>
+
+            <x-field label="Status" for="status">
+                <x-select id="status" wire:model.live="status">
+                    <option value="">Every token</option>
+                    @foreach (\App\Enums\TokenStatus::cases() as $case)
+                        <option value="{{ $case->value }}">{{ $case->label() }}</option>
+                    @endforeach
+                </x-select>
+            </x-field>
+        </div>
     </x-card>
 
     <x-card :flush="true" title="{{ $tokens->total() }} token{{ $tokens->total() === 1 ? '' : 's' }}">
@@ -84,7 +90,9 @@
                                 <td class="px-5 py-2.5">
                                     <a href="{{ route('petty-cash.show', $token) }}" wire:navigate
                                        class="font-medium text-slate-900 hover:text-indigo-600 dark:text-slate-100 dark:hover:text-sky-400">{{ $token->serial }}</a>
-                                    <span class="block text-xs text-slate-400 dark:text-slate-600">{{ $token->issued_at->format('d M Y') }}</span>
+                                    <span class="block text-xs text-slate-400 dark:text-slate-600">
+                                        <x-bs-date :date="$token->issued_at" />
+                                    </span>
                                 </td>
                                 <td class="px-4 py-2.5">
                                     <span class="text-slate-900 dark:text-slate-100">{{ $token->bill_no }}</span>

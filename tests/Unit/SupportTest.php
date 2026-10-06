@@ -38,6 +38,8 @@ class SupportTest extends TestCase
         $this->assertTrue(Money::lte('15000', '15000'));
         $this->assertTrue(Money::lt('99.99', '100'));
         $this->assertFalse(Money::gt('15000', '15000'));
+        $this->assertSame('15000.00', Money::min('20000', '15000'));
+        $this->assertSame('20000.00', Money::max('20000', '15000'));
     }
 
     public function test_the_fiscal_year_rolls_on_sixteen_july(): void

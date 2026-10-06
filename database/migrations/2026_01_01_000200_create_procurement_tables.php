@@ -8,8 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Configurable value bands, per school. Editable by that school's own
-        // Super Admin in Setup — every school has its own tier 1.
+        // Configurable value bands, per school.
         Schema::create('approval_tiers', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('tenant_id')->constrained('tenants')->cascadeOnDelete();
@@ -47,6 +46,10 @@ return new class extends Migration
             $table->unique(['tenant_id', 'id'], 'uniq_demand_tenant_id');
             $table->index(['tenant_id', 'status', 'current_tier']);
             $table->index(['tenant_id', 'created_at']);
+            $table->index(['tenant_id', 'raised_by_id', 'status'], 'idx_demands_user_status');
+            $table->index(['tenant_id', 'status', 'closed_at'], 'idx_demands_tenant_status_closed');
+            $table->index(['tenant_id', 'status', 'created_at'], 'idx_demands_tenant_status_created');
+            $table->index(['tenant_id', 'department', 'created_at'], 'idx_demands_tenant_dept_created');
         });
 
         Schema::create('demand_lines', function (Blueprint $table) {
@@ -113,7 +116,7 @@ return new class extends Migration
             $table->foreignUuid('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->string('ref');                      // PO-2082-0001, per school
             $table->string('fiscal_year', 12);
-            $table->uuid('demand_id');
+            $table->uuid('demand_id')->nullable();
             $table->uuid('vendor_id');
             $table->decimal('order_amount', 14, 2);
             $table->date('expected_date')->nullable();
@@ -125,7 +128,11 @@ return new class extends Migration
             $table->unique(['tenant_id', 'ref']);
             $table->unique(['tenant_id', 'id'], 'uniq_order_tenant_id');
             $table->index(['tenant_id', 'status']);
+            $table->index(['tenant_id', 'ordered_by_id'], 'idx_orders_orderer');
+            $table->index(['tenant_id', 'ordered_at'], 'idx_orders_tenant_ordered');
+            $table->index(['tenant_id', 'status', 'ordered_at'], 'idx_orders_tenant_status_ordered');
             $table->index('vendor_id');
+            $table->index('demand_id');
 
             $table->foreign(['tenant_id', 'demand_id'])
                 ->references(['tenant_id', 'id'])->on('demand_forms');
@@ -133,12 +140,36 @@ return new class extends Migration
                 ->references(['tenant_id', 'id'])->on('vendors');
         });
 
+        Schema::create('purchase_order_lines', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('tenant_id');
+            $table->uuid('purchase_order_id');
+            $table->uuid('demand_line_id')->nullable();
+            $table->uuid('item_type_id')->nullable();
+            $table->string('description', 255);
+            $table->integer('quantity_ordered');
+            $table->string('unit', 30)->default('piece');
+            $table->decimal('unit_price', 14, 2);
+            $table->decimal('discount', 14, 2)->default(0.00);
+            $table->decimal('tax', 14, 2)->default(0.00);
+            $table->decimal('line_total', 14, 2);
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('tenant_id')->references('id')->on('tenants');
+            $table->foreign('purchase_order_id')->references('id')->on('purchase_orders')->cascadeOnDelete();
+            $table->foreign('demand_line_id')->references('id')->on('demand_lines')->nullOnDelete();
+            $table->foreign('item_type_id')->references('id')->on('item_types')->nullOnDelete();
+
+            $table->index(['tenant_id', 'purchase_order_id']);
+            $table->index(['demand_line_id']);
+        });
+
         // The separation-of-duties gate. A CHECK constraint and a trigger in the
         // integrity migration refuse any row where received_by_id = ordered_by_id.
         Schema::create('goods_receipts', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('tenant_id')->constrained('tenants')->cascadeOnDelete();
-            $table->uuid('purchase_order_id')->unique();
+            $table->uuid('purchase_order_id');
             // Copied from the order purely so the CHECK constraint can compare them.
             // The trigger re-reads the order to confirm it was not faked.
             $table->uuid('ordered_by_id');
@@ -152,6 +183,8 @@ return new class extends Migration
             $table->timestamp('received_at')->useCurrent();
 
             $table->unique(['tenant_id', 'id'], 'uniq_receipt_tenant_id');
+            $table->index(['tenant_id', 'purchase_order_id'], 'idx_receipt_tenant_po');
+            $table->index(['tenant_id', 'received_at'], 'idx_receipts_tenant_received');
             $table->index('location_id');
 
             $table->foreign('ordered_by_id')->references('id')->on('users');
@@ -165,25 +198,85 @@ return new class extends Migration
             $table->uuid('id')->primary();
             $table->foreignUuid('tenant_id')->constrained('tenants')->cascadeOnDelete();
             $table->uuid('receipt_id');
+            $table->uuid('purchase_order_line_id')->nullable();
             $table->uuid('demand_line_id');
+            $table->uuid('location_id')->nullable();
             $table->integer('qty_ordered');
             $table->integer('qty_received');
             $table->string('remark')->nullable();
 
             $table->index('receipt_id');
             $table->index('demand_line_id');
+            $table->index('purchase_order_line_id');
+            $table->index(['tenant_id', 'demand_line_id'], 'idx_grl_tenant_demand_line');
 
             $table->foreign(['tenant_id', 'receipt_id'])
                 ->references(['tenant_id', 'id'])->on('goods_receipts')->cascadeOnDelete();
             $table->foreign(['tenant_id', 'demand_line_id'])
                 ->references(['tenant_id', 'id'])->on('demand_lines');
+            $table->foreign('purchase_order_line_id')
+                ->references('id')->on('purchase_order_lines')->nullOnDelete();
+            $table->foreign(['tenant_id', 'location_id'])
+                ->references(['tenant_id', 'id'])->on('locations');
+        });
+
+        Schema::create('supplier_returns', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('tenant_id');
+            $table->string('ref', 40);
+            $table->string('fiscal_year', 10);
+            $table->uuid('vendor_id');
+            $table->uuid('purchase_order_id')->nullable();
+            $table->uuid('goods_receipt_id')->nullable();
+            $table->decimal('total_amount', 14, 2);
+            $table->string('reason', 255);
+            $table->string('status', 30)->default('POSTED');
+            $table->uuid('returned_by_id');
+            $table->timestamp('returned_at')->useCurrent();
+
+            $table->foreign('tenant_id')->references('id')->on('tenants');
+            $table->foreign('vendor_id')->references('id')->on('vendors');
+            $table->foreign('purchase_order_id')->references('id')->on('purchase_orders')->nullOnDelete();
+            $table->foreign('goods_receipt_id')->references('id')->on('goods_receipts')->nullOnDelete();
+            $table->foreign('returned_by_id')->references('id')->on('users');
+
+            $table->index(['tenant_id', 'vendor_id']);
+            $table->index(['purchase_order_id']);
+            $table->index(['goods_receipt_id']);
+        });
+
+        Schema::create('supplier_return_lines', function (Blueprint $table) {
+            $table->uuid('id')->primary();
+            $table->uuid('tenant_id');
+            $table->uuid('supplier_return_id');
+            $table->uuid('goods_receipt_line_id')->nullable();
+            $table->uuid('purchase_order_line_id')->nullable();
+            $table->uuid('item_type_id');
+            $table->uuid('location_id');
+            $table->integer('quantity');
+            $table->decimal('unit_price', 14, 2);
+            $table->decimal('line_total', 14, 2);
+            $table->string('reason', 255)->nullable();
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->foreign('tenant_id')->references('id')->on('tenants');
+            $table->foreign('supplier_return_id')->references('id')->on('supplier_returns')->cascadeOnDelete();
+            $table->foreign('goods_receipt_line_id')->references('id')->on('goods_receipt_lines')->nullOnDelete();
+            $table->foreign('purchase_order_line_id')->references('id')->on('purchase_order_lines')->nullOnDelete();
+            $table->foreign('item_type_id')->references('id')->on('item_types');
+            $table->foreign('location_id')->references('id')->on('locations');
+
+            $table->index(['tenant_id', 'supplier_return_id']);
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('supplier_return_lines');
+        Schema::dropIfExists('supplier_returns');
         Schema::dropIfExists('goods_receipt_lines');
         Schema::dropIfExists('goods_receipts');
+        Schema::dropIfExists('purchase_order_lines');
         Schema::dropIfExists('purchase_orders');
         Schema::dropIfExists('vendors');
         Schema::dropIfExists('demand_approvals');

@@ -72,7 +72,9 @@ class Categories extends Component
                 .$category->name.' ('.$category->code.')',
         );
 
-        $this->dispatch('toast', message: $category->name.' saved.', tone: 'success', title: 'Category saved');
+        $msg = $category->name.' saved.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'success', title: $this->editingId ? 'Category Updated' : 'Category Created');
         $this->cancel();
     }
 
@@ -99,7 +101,9 @@ class Categories extends Component
         );
 
         $this->newSub[$categoryId] = '';
-        $this->dispatch('toast', message: $name.' added.', tone: 'success', title: 'Subcategory added');
+        $msg = $name.' added.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'success', title: 'Subcategory Added');
     }
 
     /**
@@ -119,7 +123,9 @@ class Categories extends Component
             detail: $category->name.' was '.($category->is_active ? 'reactivated' : 'retired'),
         );
 
-        $this->dispatch('toast', message: $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.', tone: $category->is_active ? 'success' : 'warning', title: $category->is_active ? 'Category restored' : 'Category retired');
+        $msg = $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $category->is_active ? 'success' : 'warning', title: $category->is_active ? 'Category restored' : 'Category retired');
     }
 
     public function render(): View
@@ -127,9 +133,14 @@ class Categories extends Component
         return view('livewire.setup.categories', [
             'categories' => Category::with('subcategories')
                 ->withCount('itemTypes')
-                ->when($this->search, fn ($query) => $query->where(fn ($q) => $q
-                    ->where('name', 'like', '%'.$this->search.'%')
-                    ->orWhere('code', 'like', '%'.$this->search.'%')))
+                ->when($this->search, function ($q, $search) {
+                    $search = trim($search);
+                    $q->where(function ($sub) use ($search) {
+                        $sub->where('name', 'like', "%{$search}%")
+                            ->orWhere('code', 'like', "%{$search}%")
+                            ->orWhereHas('subcategories', fn ($sc) => $sc->where('name', 'like', "%{$search}%"));
+                    });
+                })
                 ->orderBy('sort_order')
                 ->paginate(20),
         ])->title('Categories');

@@ -18,6 +18,7 @@ use App\Models\PettyCashToken;
 use App\Services\DemandService;
 use App\Services\InventoryService;
 use App\Services\OrderService;
+use App\Support\NepaliDate;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -170,7 +171,7 @@ class LivewireFlowTest extends TestCase
         Livewire::actingAs($this->staff('purchase@prativa.edu.np'))
             ->test(Orders\Index::class)
             ->assertSee($demand->ref)
-            ->assertSee($createdAt->format('d M Y, H:i'));
+            ->assertSee(NepaliDate::fromAd($createdAt)['formatted'].' BS');
     }
 
     public function test_the_count_sheet_writes_only_the_lines_that_changed(): void

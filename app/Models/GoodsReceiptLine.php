@@ -14,7 +14,7 @@ class GoodsReceiptLine extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'tenant_id', 'receipt_id', 'demand_line_id', 'qty_ordered', 'qty_received', 'remark',
+        'tenant_id', 'receipt_id', 'purchase_order_line_id', 'demand_line_id', 'location_id', 'qty_ordered', 'qty_received', 'remark',
     ];
 
     protected function casts(): array
@@ -28,6 +28,16 @@ class GoodsReceiptLine extends Model
     public function receipt(): BelongsTo
     {
         return $this->belongsTo(GoodsReceipt::class, 'receipt_id');
+    }
+
+    public function poLine(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderLine::class, 'purchase_order_line_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class, 'location_id');
     }
 
     public function demandLine(): BelongsTo

@@ -17,6 +17,9 @@ class Index extends Component
     use WithPagination;
 
     #[Url(except: '')]
+    public string $search = '';
+
+    #[Url(except: '')]
     public string $status = '';
 
     public ?string $voidingId = null;
@@ -38,14 +41,18 @@ class Index extends Component
     {
         $token = $this->service->markPaid($tokenId, auth()->user());
 
-        $this->dispatch('toast', message: "{$token->serial} settled — ".Money::npr($token->amount)." paid to {$token->claimant_name}.", tone: 'success', title: 'Token settled');
+        $msg = "{$token->serial} settled — ".Money::npr($token->amount)." paid to {$token->claimant_name}.";
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'success', title: 'Token settled');
     }
 
     public function sendToAccounts(string $tokenId): void
     {
         $token = $this->service->sendToAccounts($tokenId, auth()->user());
 
-        $this->dispatch('toast', message: "{$token->serial} is now with Accounts for review.", tone: 'success', title: 'Sent to Accounts');
+        $msg = "{$token->serial} is now with Accounts for review.";
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'success', title: 'Sent to Accounts');
     }
 
     public function openVoid(string $tokenId): void
@@ -66,13 +73,18 @@ class Index extends Component
 
         $this->closeVoid();
 
-        $this->dispatch('toast', message: "{$token->serial} voided. It stays on record with your reason attached.", tone: 'warning', title: 'Token voided');
+        $msg = "{$token->serial} voided. It stays on record with your reason attached.";
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'warning', title: 'Token voided');
     }
 
     public function render(): View
     {
         return view('livewire.petty-cash.index', [
-            'tokens' => $this->service->list($this->status ? TokenStatus::from($this->status) : null),
+            'tokens' => $this->service->list(
+                $this->status ? TokenStatus::from($this->status) : null,
+                $this->search ?: null,
+            ),
             'summary' => $this->service->summary(),
             'monthlySpend' => $this->service->monthlySpend(),
             'voiding' => $this->voidingId ? PettyCashToken::find($this->voidingId) : null,

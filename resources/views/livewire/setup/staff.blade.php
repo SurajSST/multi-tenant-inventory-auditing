@@ -121,6 +121,12 @@
         </x-sheet>
     @endif
 
+    <div class="mb-4 flex items-center justify-between gap-4">
+        <div class="w-full max-w-sm">
+            <x-input type="search" wire:model.live.debounce.300ms="search" placeholder="Search staff name, code, designation, email..." />
+        </div>
+    </div>
+
     <x-card :flush="true" title="{{ $staff->total() }} account(s)">
         <div class="table-scroll">
             <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">

@@ -44,6 +44,7 @@ class NewSchoolSeeder extends Seeder
         $this->call([
             ApprovalTierSeeder::class,
             SettingSeeder::class,
+            ChartOfAccountsSeeder::class,
         ]);
 
         if ($withCatalogue) {

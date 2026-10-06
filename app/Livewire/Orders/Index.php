@@ -14,6 +14,9 @@ class Index extends Component
     use WithPagination;
 
     #[Url(except: '')]
+    public string $search = '';
+
+    #[Url(except: '')]
     public string $status = '';
 
     #[Url(except: false)]
@@ -30,6 +33,7 @@ class Index extends Component
             'orders' => $orders->list(
                 $this->status ? OrderStatus::from($this->status) : null,
                 $this->pendingReceipt,
+                $this->search ?: null,
             ),
             'awaitingOrder' => $orders->awaitingOrder(),
         ])->title('Purchase Orders');

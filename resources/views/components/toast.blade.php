@@ -1,14 +1,52 @@
+@props([
+    'sessionStatus' => session('status'),
+    'sessionSuccess' => session('success'),
+    'sessionError' => session('error'),
+    'sessionWarning' => session('warning'),
+    'sessionToast' => session('toast'),
+    'sessionBanner' => session('flash.banner'),
+])
 <div
     x-data="{
         toasts: [],
-        add(message, tone = 'ok', title = null, duration = 4000) {
+        add(input, defaultTone = 'ok', defaultTitle = null, defaultDuration = 4000) {
+            let item = input;
+            if (Array.isArray(item)) {
+                item = item[0] || {};
+            }
+            let message = '';
+            let tone = defaultTone;
+            let title = defaultTitle;
+            let duration = defaultDuration;
+
+            if (typeof item === 'object' && item !== null) {
+                message = item.message || item.text || item.status || (typeof item === 'string' ? item : JSON.stringify(item));
+                tone = item.tone || item.type || defaultTone || 'ok';
+                title = item.title || defaultTitle;
+                duration = item.duration || defaultDuration || 4000;
+            } else {
+                message = item;
+            }
+            if (!message) return;
+
+            const messageStr = String(message).trim();
+            if (!messageStr) return;
+
+            // Prevent duplicate toasts with the exact same message from stacking
+            if (this.toasts.some(t => t.message === messageStr)) {
+                return;
+            }
+
             const id = Date.now() + Math.random();
+            const toneNormalized = (tone === 'success' ? 'ok' : (tone === 'error' ? 'bad' : tone)) || 'ok';
+            const defaultTitleDerived = title || (toneNormalized === 'bad' ? 'Error' : (toneNormalized === 'warn' ? 'Notice' : (toneNormalized === 'ok' ? 'Success' : 'Notification')));
+
             const toast = {
                 id,
-                message: typeof message === 'object' ? message.message || message.text || JSON.stringify(message) : message,
-                tone: (typeof message === 'object' ? message.tone || message.type : tone) || 'ok',
-                title: typeof message === 'object' ? message.title : title,
-                duration: (typeof message === 'object' ? message.duration : duration) || 4000,
+                message: messageStr,
+                tone: toneNormalized,
+                title: defaultTitleDerived,
+                duration: duration || 4000,
                 progress: 100,
                 paused: false,
                 timer: null,
@@ -38,7 +76,7 @@
         },
         init() {
             window.toast = (msg, tone = 'ok', title = null, duration = 4000) => {
-                this.add(msg, tone, title, duration);
+                window.dispatchEvent(new CustomEvent('toast', { detail: { message: msg, tone, title, duration } }));
             };
 
             // Livewire dispatches bubble as window events too, so subscribe only
@@ -53,6 +91,21 @@
                     this.add(payload);
                 });
             }
+
+            // Seed initial session flash toasts if present
+            @if ($sessionToast)
+                this.add({!! json_encode($sessionToast) !!});
+            @elseif ($sessionSuccess)
+                this.add(@js($sessionSuccess), 'ok', 'Success');
+            @elseif ($sessionError)
+                this.add(@js($sessionError), 'bad', 'Error');
+            @elseif ($sessionWarning)
+                this.add(@js($sessionWarning), 'warn', 'Attention');
+            @elseif ($sessionStatus)
+                this.add(@js($sessionStatus), 'info', 'Notice');
+            @elseif ($sessionBanner)
+                this.add(@js($sessionBanner), 'ok', 'Success');
+            @endif
 
             const params = new URLSearchParams(window.location.search);
             if (params.get('notice') === 'password-updated') {

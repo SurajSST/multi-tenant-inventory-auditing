@@ -1,4 +1,4 @@
-@php $nothingPending = $myQueue->isEmpty() && $toOrder->isEmpty() && $toReceive->isEmpty(); @endphp
+@php $nothingPending = $myQueue->isEmpty() && ($toOrderCount === 0) && $toReceive->isEmpty(); @endphp
 
 <div>
     <x-page-header title="Dashboard"
@@ -25,7 +25,7 @@
             </div>
             <div>
                 <p class="text-[13.5px] font-bold text-slate-900 dark:text-slate-100">Procurement &amp; Asset Health</p>
-                <p class="text-xs text-slate-500 dark:text-slate-500">Fiscal year {{ \App\Support\FiscalYear::label() }} · separation-of-duties controls active in the database</p>
+                <p class="text-xs text-slate-500 dark:text-slate-500"><span class="font-semibold text-slate-700 dark:text-slate-300">{{ \App\Support\NepaliDate::format(now()) }} BS</span> · Fiscal year {{ \App\Support\FiscalYear::label() }} · separation-of-duties controls active in the database</p>
             </div>
         </div>
 
@@ -104,14 +104,14 @@
     </div>
 
     {{-- KPI stats --}}
-    <div class="mb-6 grid grid-cols-2 gap-3.5 lg:grid-cols-6">
+    <div class="mb-6 grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-6">
         <x-stat label="Durable assets" :value="number_format($stats['durable_units'])" note="1 yr+ lifespan"
                 :href="route('inventory.register', ['lifespan' => 'DURABLE'])" />
         <x-stat label="Consumables" :value="number_format($stats['consumable_units'])" note="under 1 yr"
                 :href="route('inventory.register', ['lifespan' => 'CONSUMABLE'])" />
         <x-stat label="Awaiting approval" :value="$stats['pending_approvals']"
                 :tone="$stats['pending_approvals'] ? 'amber' : 'slate'" note="in the approval chain" :href="route('demands.index')" />
-        <x-stat label="Billed to date" :value="\App\Support\Money::format($stats['total_billed'])"
+        <x-stat label="Billed to date" :value="\App\Support\Money::formatCompact($stats['total_billed'])"
                 :note="$stats['bills_entered'] . ' verified bills'" />
         <x-stat label="Bill mismatches" :value="$stats['bill_mismatches']"
                 :tone="$stats['bill_mismatches'] ? 'rose' : 'emerald'" note="flagged for accounts"
@@ -143,7 +143,7 @@
                     </a>
                 @endif
 
-                @if ($toOrder->isNotEmpty())
+                @if ($toOrderCount > 0)
                     <a href="{{ route('orders.index') }}" wire:navigate
                        class="flex items-center gap-3 px-5 py-3.5 transition hover:bg-indigo-50/60 dark:hover:bg-sky-500/5">
                         <span class="grid size-8 shrink-0 place-items-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-sky-500/10 dark:text-sky-400">
@@ -152,7 +152,7 @@
                             </svg>
                         </span>
                         <span class="min-w-0 flex-1 text-[13.5px]">
-                            <strong class="font-semibold text-slate-900 dark:text-slate-100">{{ $toOrder->count() }} approved demand{{ $toOrder->count() === 1 ? '' : 's' }}</strong>
+                            <strong class="font-semibold text-slate-900 dark:text-slate-100">{{ $toOrderCount }} approved demand{{ $toOrderCount === 1 ? '' : 's' }}</strong>
                             <span class="text-slate-500 dark:text-slate-400"> not yet ordered</span>
                         </span>
                         <svg class="size-4 shrink-0 text-slate-400 dark:text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">

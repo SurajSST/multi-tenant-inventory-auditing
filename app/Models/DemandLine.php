@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
 use App\Tenancy\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -42,6 +43,44 @@ class DemandLine extends Model
     public function receiptLines(): HasMany
     {
         return $this->hasMany(GoodsReceiptLine::class, 'demand_line_id');
+    }
+
+    public function poLines(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderLine::class, 'demand_line_id');
+    }
+
+    public function orderedQty(): int
+    {
+        if ($this->relationLoaded('poLines')) {
+            return (int) $this->poLines
+                ->filter(function ($pol) {
+                    if ($pol->relationLoaded('order')) {
+                        return $pol->order?->status !== OrderStatus::CANCELLED;
+                    }
+
+                    return $pol->order !== null && $pol->order->status !== OrderStatus::CANCELLED;
+                })
+                ->sum('quantity_ordered');
+        }
+
+        return (int) $this->poLines()
+            ->whereHas('order', fn ($q) => $q->where('status', '!=', OrderStatus::CANCELLED))
+            ->sum('quantity_ordered');
+    }
+
+    public function remainingToOrderQty(): int
+    {
+        return max(0, $this->quantity - $this->orderedQty());
+    }
+
+    public function totalReceivedQty(): int
+    {
+        if ($this->relationLoaded('receiptLines')) {
+            return (int) $this->receiptLines->sum('qty_received');
+        }
+
+        return (int) $this->receiptLines()->sum('qty_received');
     }
 
     public function isNewItem(): bool

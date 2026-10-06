@@ -48,7 +48,17 @@ class PurchaseOrder extends Model
 
     public function receipt(): HasOne
     {
-        return $this->hasOne(GoodsReceipt::class);
+        return $this->hasOne(GoodsReceipt::class)->latestOfMany('received_at');
+    }
+
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(GoodsReceipt::class);
+    }
+
+    public function lines(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderLine::class);
     }
 
     public function bills(): HasMany
@@ -58,6 +68,22 @@ class PurchaseOrder extends Model
 
     public function isReceived(): bool
     {
-        return $this->receipt()->exists();
+        return $this->status === OrderStatus::RECEIVED;
+    }
+
+    public function isPartReceived(): bool
+    {
+        return $this->status === OrderStatus::PART_RECEIVED;
+    }
+
+    public function totalReceivedQty(string $demandLineId): int
+    {
+        $receiptIds = $this->relationLoaded('receipts')
+            ? $this->receipts->pluck('id')
+            : $this->receipts()->pluck('id');
+
+        return (int) GoodsReceiptLine::whereIn('receipt_id', $receiptIds)
+            ->where('demand_line_id', $demandLineId)
+            ->sum('qty_received');
     }
 }

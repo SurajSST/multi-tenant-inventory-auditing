@@ -20,7 +20,8 @@ class AssetUnit extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'tenant_id', 'item_type_id', 'unit_no', 'unit_code', 'location_id', 'serial_no',
+        'tenant_id', 'item_type_id', 'purchase_order_line_id', 'goods_receipt_line_id',
+        'unit_no', 'unit_code', 'location_id', 'serial_no',
         'status', 'acquired_on', 'purchase_cost', 'note',
     ];
 
@@ -43,5 +44,15 @@ class AssetUnit extends Model
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    public function poLine(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderLine::class, 'purchase_order_line_id');
+    }
+
+    public function receiptLine(): BelongsTo
+    {
+        return $this->belongsTo(GoodsReceiptLine::class, 'goods_receipt_line_id');
     }
 }

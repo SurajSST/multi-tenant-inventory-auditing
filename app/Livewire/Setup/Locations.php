@@ -65,7 +65,9 @@ class Locations extends Component
             detail: ($this->editingId ? 'Block updated: ' : 'Block added: ')."{$location->name} ({$location->code})",
         );
 
-        $this->dispatch('toast', message: "{$location->name} saved.", tone: 'success', title: 'Block saved');
+        $msg = "{$location->name} saved.";
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: 'success', title: 'Block saved');
         $this->cancel();
     }
 
@@ -81,7 +83,9 @@ class Locations extends Component
             detail: "{$location->name} was ".($location->is_active ? 'reactivated' : 'retired'),
         );
 
-        $this->dispatch('toast', message: "{$location->name} ".($location->is_active ? 'reactivated' : 'retired').'.', tone: $location->is_active ? 'success' : 'warning', title: $location->is_active ? 'Block restored' : 'Block retired');
+        $msg = "{$location->name} ".($location->is_active ? 'reactivated' : 'retired').'.';
+        session()->flash('status', $msg);
+        $this->dispatch('toast', message: $msg, tone: $location->is_active ? 'success' : 'warning', title: $location->is_active ? 'Block restored' : 'Block retired');
     }
 
     public function render(): View

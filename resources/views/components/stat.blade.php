@@ -14,12 +14,21 @@
         'down' => 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400',
         'neutral' => 'bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-slate-400',
     ];
+
+    $rawVal = strip_tags((string) $value);
+    $valLength = mb_strlen($rawVal);
+    $sizeClass = match (true) {
+        $valLength > 14 => 'text-[15px] sm:text-base xl:text-[16px] 2xl:text-lg',
+        $valLength > 10 => 'text-base sm:text-lg xl:text-lg 2xl:text-xl',
+        $valLength > 7  => 'text-lg sm:text-xl 2xl:text-2xl',
+        default         => 'text-2xl',
+    };
 @endphp
 
 <{{ $href ? 'a' : 'div' }}
     @if ($href) href="{{ $href }}" wire:navigate @endif
     {{ $attributes->merge(['class' =>
-        'group relative flex flex-col justify-between rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-900/5 transition-all '.
+        'group relative flex flex-col justify-between rounded-xl bg-white p-3.5 sm:p-4 shadow-sm ring-1 ring-slate-900/5 transition-all '.
         'dark:bg-slate-900 dark:ring-white/10 '.
         ($href ? 'hover:-translate-y-0.5 hover:shadow-md hover:ring-indigo-300 dark:hover:ring-sky-500/40' : '')
     ]) }}>
@@ -31,7 +40,9 @@
             </span>
         @endif
     </div>
-    <p class="tnum mt-1.5 overflow-hidden text-ellipsis whitespace-nowrap text-2xl font-bold {{ $tones[$tone] }}">{{ $value }}</p>
+    <p title="{{ $rawVal }}" class="tnum mt-1.5 font-bold tracking-tight {{ $sizeClass }} {{ $tones[$tone] }} leading-tight break-normal">
+        {{ $value }}
+    </p>
     @if ($note)
         <p class="mt-1 text-xs text-slate-500 dark:text-slate-500">{{ $note }}</p>
     @endif

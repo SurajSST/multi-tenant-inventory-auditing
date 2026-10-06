@@ -27,9 +27,16 @@
         </x-card>
 
         <div class="space-y-4 lg:col-span-2">
-            <x-field label="Search categories" for="search">
-                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Name or code" />
-            </x-field>
+            <div>
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Search categories and subcategories..." />
+            </div>
+
+            @if ($categories->isEmpty())
+                <x-card>
+                    <x-empty title="No categories found"
+                             note="No categories or subcategories match your search query." />
+                </x-card>
+            @endif
             @foreach ($categories as $category)
                 <x-card wire:key="cat-{{ $category->id }}" class="{{ $category->is_active ? '' : 'opacity-60' }}">
                     <div class="flex flex-wrap items-start justify-between gap-3">
