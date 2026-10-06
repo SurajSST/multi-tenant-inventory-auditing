@@ -38,7 +38,11 @@
                                 <td class="whitespace-nowrap px-4 py-3">{{ $receipt->received_at->format('d M Y') }}<span class="ml-1 text-xs text-slate-500">{{ $receipt->location->name }}</span></td>
                                 <td class="px-4 py-3">{{ $receipt->condition->label() }}</td>
                                 <td class="px-4 py-3">{{ $receipt->receivedBy->full_name }}</td>
-                                <td class="px-5 py-3 text-right"><x-button variant="secondary" size="sm" href="{{ route('orders.show', $receipt->purchaseOrder) }}" wire:navigate>Open order</x-button></td>
+                                <td class="px-5 py-3 text-right">
+                                    <x-button variant="secondary" size="sm" class="min-w-[108px] shrink-0 whitespace-nowrap" href="{{ route('orders.show', $receipt->purchaseOrder) }}" wire:navigate>
+                                        View order <span aria-hidden="true">→</span>
+                                    </x-button>
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
