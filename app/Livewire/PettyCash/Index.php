@@ -42,7 +42,6 @@ class Index extends Component
         $token = $this->service->markPaid($tokenId, auth()->user());
 
         $msg = "{$token->serial} settled — ".Money::npr($token->amount)." paid to {$token->claimant_name}.";
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: 'Token settled');
     }
 
@@ -51,7 +50,6 @@ class Index extends Component
         $token = $this->service->sendToAccounts($tokenId, auth()->user());
 
         $msg = "{$token->serial} is now with Accounts for review.";
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: 'Sent to Accounts');
     }
 
@@ -74,7 +72,6 @@ class Index extends Component
         $this->closeVoid();
 
         $msg = "{$token->serial} voided. It stays on record with your reason attached.";
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'warning', title: 'Token voided');
     }
 

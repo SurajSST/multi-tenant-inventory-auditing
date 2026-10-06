@@ -73,7 +73,6 @@ class Categories extends Component
         );
 
         $msg = $category->name.' saved.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: $this->editingId ? 'Category Updated' : 'Category Created');
         $this->cancel();
     }
@@ -102,7 +101,6 @@ class Categories extends Component
 
         $this->newSub[$categoryId] = '';
         $msg = $name.' added.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: 'Subcategory Added');
     }
 
@@ -124,7 +122,6 @@ class Categories extends Component
         );
 
         $msg = $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: $category->is_active ? 'success' : 'warning', title: $category->is_active ? 'Category restored' : 'Category retired');
     }
 

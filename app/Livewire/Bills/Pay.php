@@ -132,11 +132,11 @@ class Pay extends Component
             'allocations' => $preparedAllocations,
         ], auth()->user());
 
-        session()->flash('flash.banner', sprintf(
-            'Payment voucher %s for %s recorded successfully.',
-            $payment->voucher_no,
-            Money::npr($payment->amount)
-        ));
+        $this->dispatch('toast',
+            message: sprintf('Payment voucher %s for %s recorded successfully.', $payment->voucher_no, Money::npr($payment->amount)),
+            tone: 'success',
+            title: 'Payment recorded',
+        );
 
         $this->redirect(route('bills.index'), navigate: true);
     }

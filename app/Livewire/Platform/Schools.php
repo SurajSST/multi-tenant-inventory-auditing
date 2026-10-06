@@ -200,7 +200,6 @@ class Schools extends Component
 
         $msg = "{$tenant->name} is set up".($this->withCatalogue ? ' with the standard catalogue' : ' with an empty register').". {$this->adminName} can sign in with the default password and will be made to change it.";
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: 'success',
@@ -249,7 +248,6 @@ class Schools extends Component
         );
 
         $msg = "{$tenant->name} details updated successfully.";
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: 'School details updated');
 
         $this->cancel();
@@ -271,7 +269,6 @@ class Schools extends Component
             ? $tenant->name.' is active again.'
             : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.';
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: $tenant->is_active ? 'success' : 'warning',

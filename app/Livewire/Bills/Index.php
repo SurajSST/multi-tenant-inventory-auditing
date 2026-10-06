@@ -53,7 +53,6 @@ class Index extends Component
         $this->closeClear();
 
         $msg = "The variance on bill {$bill->bill_no} is accepted and on record against your name. The original three figures are unchanged.";
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: 'success',

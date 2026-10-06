@@ -101,7 +101,7 @@ class SupplierReturnCreate extends Component
             'lines' => $lines,
         ], auth()->user());
 
-        session()->flash('status', "Supplier return {$return->ref} posted successfully. Inventory and Accounts Payable updated.");
+        $this->dispatch('toast', message: "Supplier return {$return->ref} posted successfully. Inventory and Accounts Payable updated.", tone: 'success', title: 'Supplier return posted');
 
         $this->redirectRoute('orders.show', $this->orderId, navigate: true);
     }

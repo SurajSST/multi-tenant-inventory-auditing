@@ -1,11 +1,3 @@
-@props([
-    'sessionStatus' => session('status'),
-    'sessionSuccess' => session('success'),
-    'sessionError' => session('error'),
-    'sessionWarning' => session('warning'),
-    'sessionToast' => session('toast'),
-    'sessionBanner' => session('flash.banner'),
-])
 <div
     x-data="{
         toasts: [],
@@ -91,21 +83,6 @@
                     this.add(payload);
                 });
             }
-
-            // Seed initial session flash toasts if present
-            @if ($sessionToast)
-                this.add({!! json_encode($sessionToast) !!});
-            @elseif ($sessionSuccess)
-                this.add(@js($sessionSuccess), 'ok', 'Success');
-            @elseif ($sessionError)
-                this.add(@js($sessionError), 'bad', 'Error');
-            @elseif ($sessionWarning)
-                this.add(@js($sessionWarning), 'warn', 'Attention');
-            @elseif ($sessionStatus)
-                this.add(@js($sessionStatus), 'info', 'Notice');
-            @elseif ($sessionBanner)
-                this.add(@js($sessionBanner), 'ok', 'Success');
-            @endif
 
             const params = new URLSearchParams(window.location.search);
             if (params.get('notice') === 'password-updated') {

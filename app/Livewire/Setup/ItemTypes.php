@@ -199,7 +199,6 @@ class ItemTypes extends Component
         );
 
         $msg = $item->name.' saved.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: $this->editingId ? 'Item Updated' : 'Item Created');
         $this->cancel();
     }
@@ -217,7 +216,6 @@ class ItemTypes extends Component
         );
 
         $msg = $item->name.' '.($item->is_active ? 'reactivated' : 'retired').'.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: $item->is_active ? 'success' : 'warning', title: $item->is_active ? 'Item restored' : 'Item retired');
     }
 

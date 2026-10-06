@@ -36,7 +36,6 @@ class Settings extends Component
         $settings->set(SettingService::ALLOW_ORDER_ABOVE_APPROVAL, $this->allowOrderAboveApproval, $user);
 
         $msg = 'Settings saved. Tokens already issued keep the ceiling that was in force when they were created.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: 'Settings saved');
     }
 

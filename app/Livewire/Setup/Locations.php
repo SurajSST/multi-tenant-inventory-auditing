@@ -66,7 +66,6 @@ class Locations extends Component
         );
 
         $msg = "{$location->name} saved.";
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: 'success', title: 'Block saved');
         $this->cancel();
     }
@@ -84,7 +83,6 @@ class Locations extends Component
         );
 
         $msg = "{$location->name} ".($location->is_active ? 'reactivated' : 'retired').'.';
-        session()->flash('status', $msg);
         $this->dispatch('toast', message: $msg, tone: $location->is_active ? 'success' : 'warning', title: $location->is_active ? 'Block restored' : 'Block retired');
     }
 

@@ -199,13 +199,6 @@ class Receive extends Component
                 $result['partial'] ? ' The order is marked partly received.' : '',
             ), tone: 'success', title: 'Delivery verified');
 
-            session()->flash('flash.banner', sprintf(
-                'Receipt recorded for %s (%d units posted to inventory)%s.',
-                $this->order->ref,
-                $result['units_posted'],
-                $result['partial'] ? ' — partial shipment' : '',
-            ));
-
             $this->redirect(route('orders.show', $this->orderId), navigate: true);
         } catch (AuthorizationException $e) {
             $this->addError('receipt', $e->getMessage());

@@ -341,7 +341,6 @@ class Staff extends Component
             ? $this->fullName.' can now work at this school.'
             : $this->fullName.' updated.';
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: 'success',
@@ -377,7 +376,6 @@ class Staff extends Component
             ? $membership->user->full_name.' can work here again.'
             : $membership->user->full_name.' no longer works here. Their account at any other school is untouched.';
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: $membership->is_active ? 'success' : 'warning',
@@ -408,7 +406,6 @@ class Staff extends Component
                 ? ' This is their login everywhere, so it applies at every school they work at.'
                 : '');
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: 'success',

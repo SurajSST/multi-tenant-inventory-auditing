@@ -113,7 +113,6 @@ class Queue extends Component
             ? "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors))
             : "Successfully approved {$approvedCount} demand form(s).";
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: $errors ? 'warning' : 'success',
@@ -183,7 +182,6 @@ class Queue extends Component
                 : 'It is fully approved and ready for an order.')
             : "{$demand->ref} rejected. The person who raised it can see your reason.";
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: $action === ApprovalAction::APPROVE ? 'success' : 'warning',

@@ -210,7 +210,6 @@ class Create extends Component
             ? "Bill {$bill->bill_no} is entered but FLAGGED: it does not agree with the order/receipts. It stays flagged until it is cleared in writing."
             : "Bill {$bill->bill_no} is entered and matches the order and the approval.";
 
-        session()->flash('status', $msg);
         $this->dispatch('toast',
             message: $msg,
             tone: $bill->isFlagged() ? 'warning' : 'success',
