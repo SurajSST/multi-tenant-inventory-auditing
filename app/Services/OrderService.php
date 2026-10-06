@@ -116,11 +116,17 @@ class OrderService
             $computedOrderAmount = '0.00';
 
             if (! empty($data['lines'])) {
+                $seenDemandLines = [];
                 foreach ($data['lines'] as $lineInput) {
                     $dLine = $demandLinesById->get($lineInput['demand_line_id']);
                     if (! $dLine) {
                         throw ValidationException::withMessages(['lines' => 'A selected item does not belong to this demand.']);
                     }
+
+                    if (isset($seenDemandLines[$dLine->id])) {
+                        throw ValidationException::withMessages(['lines' => "{$dLine->item_name} appears more than once. Combine it into one order line."]);
+                    }
+                    $seenDemandLines[$dLine->id] = true;
 
                     $qtyOrdered = (int) $lineInput['quantity_ordered'];
                     if ($qtyOrdered <= 0) {
@@ -182,7 +188,15 @@ class OrderService
                 }
             }
 
-            $orderAmount = ! empty($data['order_amount']) ? Money::of($data['order_amount']) : $computedOrderAmount;
+            $orderAmount = $computedOrderAmount;
+            if (! empty($data['order_amount']) && Money::of($data['order_amount']) !== $computedOrderAmount) {
+                throw ValidationException::withMessages([
+                    'order_amount' => sprintf(
+                        'The order total must match the line items (%s). Update the line quantities or prices and try again.',
+                        Money::npr($computedOrderAmount),
+                    ),
+                ]);
+            }
 
             $overBy = Money::sub($orderAmount, $demand->total_amount);
 
@@ -370,93 +384,103 @@ class OrderService
     {
         Gate::forUser($user)->authorize('receive-goods');
 
-        $order = PurchaseOrder::with(['receipts.lines', 'lines.demandLine', 'orderedBy', 'vendor'])
-            ->findOrFail($orderId);
+        $result = DB::transaction(function () use ($orderId, $lines, $meta, $user) {
+            // Serialize receipts for a PO. All quantity checks happen while this lock is held.
+            $order = PurchaseOrder::with(['receipts.lines', 'lines.demandLine', 'orderedBy', 'vendor'])
+                ->lockForUpdate()
+                ->findOrFail($orderId);
 
-        if ($order->status === OrderStatus::CANCELLED) {
-            throw ValidationException::withMessages([
-                'order' => 'This order was cancelled and cannot receive goods.',
-            ]);
-        }
-
-        if ($order->status === OrderStatus::RECEIVED) {
-            throw ValidationException::withMessages([
-                'order' => 'This order has already been completely received.',
-            ]);
-        }
-
-        if ($order->ordered_by_id === $user->id) {
-            throw new AuthorizationException(sprintf(
-                'You placed %s. Somebody else must verify that it arrived — that separation is the whole point of the control.',
-                $order->ref,
-            ));
-        }
-
-        if (! Location::whereKey($meta['location_id'] ?? null)->exists()) {
-            throw ValidationException::withMessages([
-                'location_id' => 'Name the block the goods were put into.',
-            ]);
-        }
-
-        $poLinesById = $order->lines->keyBy('id');
-        $poLinesByDemandLineId = $order->lines->keyBy('demand_line_id');
-
-        // Check cumulative quantities already received across all receipts for this order
-        $priorTotals = GoodsReceiptLine::whereIn('purchase_order_line_id', $poLinesById->keys())
-            ->groupBy('purchase_order_line_id')
-            ->selectRaw('purchase_order_line_id, sum(qty_received) as total_received')
-            ->pluck('total_received', 'purchase_order_line_id');
-
-        $totalReceivingNow = 0;
-        $matchedLines = [];
-
-        foreach ($lines as $line) {
-            $poLine = null;
-            if (! empty($line['purchase_order_line_id'])) {
-                $poLine = $poLinesById->get($line['purchase_order_line_id']);
-            } elseif (! empty($line['demand_line_id'])) {
-                $poLine = $poLinesByDemandLineId->get($line['demand_line_id']);
-            }
-
-            if (! $poLine) {
+            if ($order->status === OrderStatus::CANCELLED) {
                 throw ValidationException::withMessages([
-                    'lines' => 'A receipt line does not belong to this order.',
+                    'order' => 'This order was cancelled and cannot receive goods.',
                 ]);
             }
 
-            $qty = (int) $line['qty_received'];
-            $totalReceivingNow += $qty;
-
-            $alreadyReceived = (int) ($priorTotals->get($poLine->id) ?? 0);
-            $remainingAllowed = max(0, $poLine->quantity_ordered - $alreadyReceived);
-
-            if ($qty < 0 || $qty > $remainingAllowed) {
+            if ($order->status === OrderStatus::RECEIVED) {
                 throw ValidationException::withMessages([
-                    'lines' => sprintf(
-                        '%s: %d ordered, %d previously received, %d remaining. You entered %d.',
-                        $poLine->description,
-                        $poLine->quantity_ordered,
-                        $alreadyReceived,
-                        $remainingAllowed,
-                        $qty,
-                    ),
+                    'order' => 'This order has already been completely received.',
                 ]);
             }
 
-            $matchedLines[] = [
-                'po_line' => $poLine,
-                'qty_received' => $qty,
-                'remark' => $line['remark'] ?? null,
-            ];
-        }
+            if ($order->ordered_by_id === $user->id) {
+                throw new AuthorizationException(sprintf(
+                    'You placed %s. Somebody else must verify that it arrived — that separation is the whole point of the control.',
+                    $order->ref,
+                ));
+            }
 
-        if ($totalReceivingNow <= 0) {
-            throw ValidationException::withMessages([
-                'lines' => 'At least one item must have a received quantity greater than zero.',
-            ]);
-        }
+            if (! Location::whereKey($meta['location_id'] ?? null)->exists()) {
+                throw ValidationException::withMessages([
+                    'location_id' => 'Name the block the goods were put into.',
+                ]);
+            }
 
-        $result = DB::transaction(function () use ($order, $matchedLines, $meta, $user, $priorTotals) {
+            $poLinesById = $order->lines->keyBy('id');
+            $poLinesByDemandLineId = $order->lines->keyBy('demand_line_id');
+
+            // Check cumulative quantities already received across all receipts for this order
+            $priorTotals = GoodsReceiptLine::whereIn('purchase_order_line_id', $poLinesById->keys())
+                ->groupBy('purchase_order_line_id')
+                ->selectRaw('purchase_order_line_id, sum(qty_received) as total_received')
+                ->pluck('total_received', 'purchase_order_line_id');
+
+            $totalReceivingNow = 0;
+            $matchedLines = [];
+            $seenPoLines = [];
+
+            foreach ($lines as $line) {
+                $poLine = null;
+                if (! empty($line['purchase_order_line_id'])) {
+                    $poLine = $poLinesById->get($line['purchase_order_line_id']);
+                } elseif (! empty($line['demand_line_id'])) {
+                    $poLine = $poLinesByDemandLineId->get($line['demand_line_id']);
+                }
+
+                if (! $poLine) {
+                    throw ValidationException::withMessages([
+                        'lines' => 'A receipt line does not belong to this order.',
+                    ]);
+                }
+
+                if (isset($seenPoLines[$poLine->id])) {
+                    throw ValidationException::withMessages([
+                        'lines' => "{$poLine->description} appears more than once in this receipt. Combine the quantities into one line.",
+                    ]);
+                }
+                $seenPoLines[$poLine->id] = true;
+
+                $qty = (int) $line['qty_received'];
+                $totalReceivingNow += $qty;
+
+                $alreadyReceived = (int) ($priorTotals->get($poLine->id) ?? 0);
+                $remainingAllowed = max(0, $poLine->quantity_ordered - $alreadyReceived);
+
+                if ($qty < 0 || $qty > $remainingAllowed) {
+                    throw ValidationException::withMessages([
+                        'lines' => sprintf(
+                            '%s: %d ordered, %d previously received, %d remaining. You entered %d.',
+                            $poLine->description,
+                            $poLine->quantity_ordered,
+                            $alreadyReceived,
+                            $remainingAllowed,
+                            $qty,
+                        ),
+                    ]);
+                }
+
+                $matchedLines[] = [
+                    'po_line' => $poLine,
+                    'qty_received' => $qty,
+                    'remark' => $line['remark'] ?? null,
+                ];
+            }
+
+            if ($totalReceivingNow <= 0) {
+                throw ValidationException::withMessages([
+                    'lines' => 'At least one item must have a received quantity greater than zero.',
+                ]);
+            }
+
             $receipt = GoodsReceipt::create([
                 'purchase_order_id' => $order->id,
                 'ordered_by_id' => $order->ordered_by_id,
@@ -603,6 +627,7 @@ class OrderService
             return ['receipt' => $receipt, 'units_posted' => $posted, 'partial' => ! $orderFullyReceived];
         });
 
+        $order = PurchaseOrder::with(['vendor', 'demand'])->findOrFail($orderId);
         $this->notify->goodsReceived($order, $result['receipt']);
 
         return $result;

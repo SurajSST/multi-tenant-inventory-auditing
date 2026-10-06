@@ -117,6 +117,51 @@ class AccountsPayableAndAccountingTest extends TestCase
         }
     }
 
+    public function test_purchase_order_total_must_match_its_line_items(): void
+    {
+        $demand = $this->approvedDemand(qty: 10, rate: 5000);
+
+        try {
+            app(OrderService::class)->create([
+                'demand_id' => $demand->id,
+                'vendor_name' => 'Incorrect Total Supplier',
+                'order_amount' => 1,
+            ], $this->staff('purchase@prativa.edu.np'));
+
+            $this->fail('A purchase order total unrelated to its item lines was accepted.');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('must match the line items', $e->validator->errors()->first('order_amount'));
+        }
+    }
+
+    public function test_duplicate_receipt_lines_cannot_over_receive_an_order(): void
+    {
+        $demand = $this->approvedDemand(qty: 10, rate: 5000);
+        $orderer = $this->staff('purchase@prativa.edu.np');
+        $receiver = $this->staff('store@prativa.edu.np');
+        $location = Location::where('is_active', true)->firstOrFail();
+        $orders = app(OrderService::class);
+        $order = $orders->create([
+            'demand_id' => $demand->id,
+            'vendor_name' => 'Duplicate Receipt Supplier',
+            'order_amount' => 50000,
+        ], $orderer);
+        $line = $order->lines->first();
+
+        try {
+            $orders->receive($order->id, [
+                ['purchase_order_line_id' => $line->id, 'qty_received' => 6],
+                ['purchase_order_line_id' => $line->id, 'qty_received' => 6],
+            ], ['location_id' => $location->id], $receiver);
+
+            $this->fail('Duplicate lines for a PO item were accepted in one receipt.');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('appears more than once', $e->validator->errors()->first('lines'));
+        }
+
+        $this->assertSame(0, $order->receipts()->count());
+    }
+
     public function test_three_way_match_verifies_goods_actually_received(): void
     {
         $demand = $this->approvedDemand(qty: 10, rate: 5000);

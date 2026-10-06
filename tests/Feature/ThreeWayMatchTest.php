@@ -38,6 +38,11 @@ class ThreeWayMatchTest extends TestCase
             'demand_id' => $demand->id,
             'vendor_name' => 'Himalaya Furniture Udyog',
             'order_amount' => $orderAmount,
+            'lines' => [[
+                'demand_line_id' => $demand->lines->first()->id,
+                'quantity_ordered' => 40,
+                'unit_price' => intdiv((int) $orderAmount, 40),
+            ]],
         ], $this->staff('purchase@prativa.edu.np'));
 
         $orders->receive($order->id, [
