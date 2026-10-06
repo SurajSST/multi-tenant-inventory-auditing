@@ -32,10 +32,11 @@
                 Download PDF
             </x-button>
             @if ($demand->isPending() && ($demand->raised_by_id === auth()->id() || auth()->user()->isSuperAdmin()))
-                <x-button variant="secondary" wire:click="withdraw"
-                          wire:confirm="Withdraw this demand form? It stops here and cannot be revived.">
+                <x-confirm-dialog action="withdraw" title="Withdraw this demand form?"
+                                  message="It stops here and cannot be revived. This decision will be recorded in the audit trail."
+                                  confirm-label="Withdraw demand">
                     Withdraw
-                </x-button>
+                </x-confirm-dialog>
             @endif
             <x-button variant="secondary" href="{{ route('demands.index') }}" wire:navigate>All demands</x-button>
         </x-slot:actions>

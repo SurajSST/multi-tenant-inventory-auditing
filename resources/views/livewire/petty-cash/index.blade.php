@@ -130,9 +130,13 @@
                                                     you issued it
                                                 </span>
                                             @else
-                                                <button type="button" wire:click="pay('{{ $token->id }}')"
-                                                        wire:confirm="Release {{ \App\Support\Money::npr($token->amount) }} to {{ $token->claimant_name }}?"
-                                                        class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">Mark paid</button>
+                                                <x-confirm-dialog action="pay" :params="[$token->id]"
+                                                                  title="Release this petty cash payment?"
+                                                                  :message="'Release '.\App\Support\Money::npr($token->amount).' to '.$token->claimant_name.'?'"
+                                                                  confirm-label="Mark as paid" tone="primary"
+                                                                  trigger-class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">
+                                                    Mark paid
+                                                </x-confirm-dialog>
                                             @endif
 
                                             <button type="button" wire:click="openVoid('{{ $token->id }}')"

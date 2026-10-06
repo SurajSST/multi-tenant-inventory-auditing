@@ -308,11 +308,13 @@
                                         Edit
                                     </x-button>
 
-                                    <button type="button" wire:click="toggleActive('{{ $school->id }}')"
-                                            wire:confirm="{{ $school->is_active ? 'Suspend '.$school->name.'? Nobody there will be able to sign in.' : 'Resume '.$school->name.'?' }}"
-                                            class="rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors {{ $school->is_active ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10' : 'text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10' }}">
+                                    <x-confirm-dialog action="toggleActive" :params="[$school->id]"
+                                                      :title="$school->is_active ? 'Suspend this school?' : 'Resume this school?'"
+                                                      :message="$school->is_active ? 'Suspend '.$school->name.'? Nobody at this school will be able to sign in.' : 'Resume '.$school->name.'?'"
+                                                      :confirm-label="$school->is_active ? 'Suspend school' : 'Resume school'"
+                                                      :trigger-class="'rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors '.($school->is_active ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10' : 'text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10')">
                                         {{ $school->is_active ? 'Suspend' : 'Resume' }}
-                                    </button>
+                                    </x-confirm-dialog>
                                 </div>
                             </td>
                         </tr>

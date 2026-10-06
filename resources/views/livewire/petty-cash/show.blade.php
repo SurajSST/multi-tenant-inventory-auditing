@@ -23,10 +23,11 @@
                 Download PDF
             </x-button>
             @if ($token->isOpen() && $token->issued_by_id !== auth()->id())
-                <x-button wire:click="pay"
-                          wire:confirm="Release {{ \App\Support\Money::npr($token->amount) }} to {{ $token->claimant_name }}?">
+                <x-confirm-dialog action="pay" title="Release this petty cash payment?"
+                                  :message="'Release '.\App\Support\Money::npr($token->amount).' to '.$token->claimant_name.'?'"
+                                  confirm-label="Mark as paid" tone="primary">
                     Mark paid
-                </x-button>
+                </x-confirm-dialog>
             @endif
             <x-button variant="secondary" href="{{ route('petty-cash.index') }}" wire:navigate>All tokens</x-button>
         </x-slot:actions>

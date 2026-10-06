@@ -175,17 +175,23 @@
                                 <div class="flex flex-wrap justify-end gap-x-3 gap-y-1">
                                     <button type="button" wire:click="edit('{{ $person->id }}')"
                                             class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">Edit</button>
-                                    <button type="button" wire:click="resetPassword('{{ $person->id }}')"
-                                            wire:confirm="Reset {{ $person->user->full_name }} to the default password? They will have to change it on their next sign-in."
-                                            class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-500 dark:hover:text-slate-100">Reset password</button>
+                                    <x-confirm-dialog action="resetPassword" :params="[$person->id]"
+                                                      title="Reset this staff password?"
+                                                      :message="'Reset '.$person->user->full_name.' to the default password? They will have to change it on their next sign-in.'"
+                                                      confirm-label="Reset password" tone="primary"
+                                                      trigger-class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-500 dark:hover:text-slate-100">
+                                        Reset password
+                                    </x-confirm-dialog>
                                     @if ($person->user_id !== auth()->id())
-                                        <button type="button" wire:click="toggleActive('{{ $person->id }}')"
-                                                wire:confirm="{{ $person->is_active
-                                                    ? $person->user->full_name.' will no longer be able to work at this school. Everything they have done stays on the record, and their account at any other school is untouched. Continue?'
-                                                    : 'Let '.$person->user->full_name.' work at this school again?' }}"
-                                                class="text-xs font-medium {{ $person->is_active ? 'text-rose-600 hover:text-rose-500 dark:text-rose-400' : 'text-emerald-600 hover:text-emerald-500 dark:text-emerald-400' }}">
+                                        <x-confirm-dialog action="toggleActive" :params="[$person->id]"
+                                                          :title="$person->is_active ? 'Deactivate this staff member?' : 'Reactivate this staff member?'"
+                                                          :message="$person->is_active
+                                                            ? $person->user->full_name.' will no longer be able to work at this school. Their history stays on the record, and their account at other schools is untouched.'
+                                                            : 'Let '.$person->user->full_name.' work at this school again?'"
+                                                          :confirm-label="$person->is_active ? 'Deactivate staff' : 'Reactivate staff'"
+                                                          :trigger-class="'text-xs font-medium '.($person->is_active ? 'text-rose-600 hover:text-rose-500 dark:text-rose-400' : 'text-emerald-600 hover:text-emerald-500 dark:text-emerald-400')">
                                             {{ $person->is_active ? 'Deactivate' : 'Reactivate' }}
-                                        </button>
+                                        </x-confirm-dialog>
                                     @endif
                                 </div>
                             </td>
