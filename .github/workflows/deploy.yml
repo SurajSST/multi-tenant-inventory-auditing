@@ -20,6 +20,8 @@ jobs:
         env:
           MARIADB_ROOT_PASSWORD: testing
           MARIADB_DATABASE: prativa_inventory_test
+          MARIADB_USER: prativa_test
+          MARIADB_PASSWORD: testing
         ports:
           - 3306:3306
         options: >-
@@ -35,7 +37,7 @@ jobs:
       DB_HOST: 127.0.0.1
       DB_PORT: 3306
       DB_DATABASE: prativa_inventory_test
-      DB_USERNAME: root
+      DB_USERNAME: prativa_test
       DB_PASSWORD: testing
       CACHE_STORE: array
       SESSION_DRIVER: array
@@ -43,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -54,10 +56,24 @@ jobs:
           coverage: none
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
+
+      - name: Verify MariaDB connection
+        run: |
+          php <<'PHP'
+          <?php
+          $dsn = sprintf(
+              'mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4',
+              getenv('DB_HOST'),
+              getenv('DB_PORT'),
+              getenv('DB_DATABASE'),
+          );
+          $pdo = new PDO($dsn, getenv('DB_USERNAME'), getenv('DB_PASSWORD'));
+          printf("Connected to MariaDB %s\n", $pdo->query('SELECT VERSION()')->fetchColumn());
+          PHP
 
       - name: Install PHP dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
@@ -82,7 +98,7 @@ jobs:
 
     steps:
       - name: 🚚 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: 🐘 Setup PHP
         uses: shivammathur/setup-php@v2
@@ -93,7 +109,7 @@ jobs:
           coverage: none
 
       - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: 'npm'
