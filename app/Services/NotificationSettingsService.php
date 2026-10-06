@@ -16,6 +16,16 @@ class NotificationSettingsService
 {
     private const MAIL_KEYS = ['mailer', 'host', 'port', 'username', 'password', 'encryption', 'from_address', 'from_name'];
 
+    private array $baseMailConfig;
+
+    public function __construct()
+    {
+        // Capture the application's configured defaults before any school's
+        // settings are applied. The service is a singleton for the lifetime of
+        // the app worker so one tenant can never become the next tenant's base.
+        $this->baseMailConfig = config('mail');
+    }
+
     public function mailSettings(): array
     {
         $rows = AppSetting::whereIn('key', array_map(fn ($k) => 'mail_'.$k, self::MAIL_KEYS))->get()->keyBy('key');
@@ -51,9 +61,14 @@ class NotificationSettingsService
     public function applyMailConfig(): void
     {
         $settings = $this->mailSettings();
-        // Keep the environment's safe development default until an admin has
-        // completed the sender configuration.
+        // Restore the app defaults first. Without this reset, a long-lived
+        // worker can accidentally send a later school's mail through the
+        // previous school's SMTP account when no sender is configured here.
+        config(['mail' => $this->baseMailConfig]);
+
         if (! $settings['from_address']) {
+            Mail::purge();
+
             return;
         }
         config(['mail.default' => $settings['mailer'] ?: 'smtp']);
@@ -62,6 +77,7 @@ class NotificationSettingsService
         config(['mail.mailers.smtp.username' => $settings['username'] ?: null]);
         config(['mail.mailers.smtp.password' => $settings['password'] ?: null]);
         config(['mail.mailers.smtp.scheme' => $settings['encryption'] === 'ssl' ? 'smtps' : 'smtp']);
+        config(['mail.mailers.smtp.auto_tls' => $settings['encryption'] === 'tls']);
         config(['mail.from.address' => $settings['from_address']]);
         config(['mail.from.name' => $settings['from_name']]);
         Mail::purge();

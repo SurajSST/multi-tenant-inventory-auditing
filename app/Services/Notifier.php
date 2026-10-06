@@ -13,6 +13,7 @@ use App\Notifications\BillFlagged;
 use App\Notifications\DemandAwaitingYou;
 use App\Notifications\DemandDecided;
 use App\Notifications\GoodsReceived;
+use App\Notifications\OrderAwaitingReceipt;
 use App\Notifications\SchoolNotification;
 use App\Support\Money;
 use App\Tenancy\TenantContext;
@@ -77,6 +78,22 @@ class Notifier
     }
 
     // ── goods and money ──────────────────────────────────────
+
+    /** Receiving Officers hear when a new order is ready for independent verification. */
+    public function orderAwaitingReceipt(PurchaseOrder $order): void
+    {
+        $order->loadMissing('vendor');
+
+        $this->send(
+            $this->postedWithRole(Role::RECEIVING_OFFICER)->except([$order->ordered_by_id]),
+            fn (Tenant $t) => new OrderAwaitingReceipt(
+                $t,
+                $order->ref,
+                $order->vendor->name,
+                Money::npr($order->order_amount),
+            ),
+        );
+    }
 
     /** The person who placed the order, once somebody else has checked it in. */
     public function goodsReceived(PurchaseOrder $order, GoodsReceipt $receipt): void

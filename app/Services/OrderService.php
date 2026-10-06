@@ -93,7 +93,7 @@ class OrderService
             throw ValidationException::withMessages(['vendor_name' => 'Name the vendor.']);
         }
 
-        return DB::transaction(function () use ($data, $user) {
+        $order = DB::transaction(function () use ($data, $user) {
             $demand = DemandForm::with('lines.poLines.order')->lockForUpdate()->findOrFail($data['demand_id']);
 
             if ($demand->status !== DemandStatus::APPROVED) {
@@ -281,6 +281,10 @@ class OrderService
 
             return $order;
         });
+
+        $this->notify->orderAwaitingReceipt($order);
+
+        return $order;
     }
 
     public function list(?OrderStatus $status = null, bool $pendingReceiptOnly = false, ?string $search = null, int $perPage = 25): LengthAwarePaginator

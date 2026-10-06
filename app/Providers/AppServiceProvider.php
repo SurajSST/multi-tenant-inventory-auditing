@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Enums\Role;
 use App\Models\User;
+use App\Services\NotificationSettingsService;
 use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -16,6 +17,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // One answer per request to "which school are we in".
         $this->app->singleton(TenantContext::class);
+        $this->app->singleton(NotificationSettingsService::class);
     }
 
     public function boot(): void

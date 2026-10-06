@@ -14,11 +14,9 @@ use Illuminate\Notifications\Notification;
  * happened at, a line saying what happened, and somewhere to go and deal with
  * it.
  *
- * Two channels to start with. In-app costs nothing and needs no provider, and
- * staff are signed in anyway; email reaches whoever is not. A third channel —
- * SMS, which is how a Nepali school actually reaches people — is a matter of
- * adding it to via(), because none of the notification bodies below know or
- * care how they travel.
+ * In-app, browser push, and email share the same notification body. Push is
+ * skipped until the school has VAPID keys and the recipient has subscribed;
+ * email uses the school's SMTP settings when configured.
  *
  * Sent inline, NOT queued — a deliberate choice, and worth the paragraph.
  *
@@ -28,10 +26,9 @@ use Illuminate\Notifications\Notification;
  * nobody ever will — the whole feature would silently do nothing while every
  * test passed, because phpunit.xml forces the queue to `sync`.
  *
- * So: written immediately. A bell row is one INSERT and the mail driver is
- * `log`. If real SMTP is configured later and proves slow, the fix is a queue
- * worker plus ShouldQueue here — a decision to take with a worker actually
- * running, not before.
+ * So: written immediately. This works without a queue worker. If configured
+ * SMTP proves too slow, the fix is a supervised worker plus ShouldQueue here
+ * — a decision to take with a worker actually running, not before.
  *
  * Nothing is lost by not being afterCommit: Notifier is only ever called once
  * the transaction has already closed.

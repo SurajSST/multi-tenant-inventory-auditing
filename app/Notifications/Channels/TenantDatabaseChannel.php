@@ -9,10 +9,9 @@ use Illuminate\Notifications\Notification;
 /**
  * Laravel's database channel, plus the school the notification is about.
  *
- * The tenant is carried on the notification itself rather than read from the
- * request: these are queued, and a queued job has no session to ask. Whatever
- * school the work happened in is the school the row belongs to, however long
- * afterwards it is written.
+ * The tenant is carried on the notification itself rather than inferred from
+ * a global scope. That keeps the notification associated with the school the
+ * work happened in, including when a shared user belongs to multiple schools.
  */
 class TenantDatabaseChannel extends DatabaseChannel
 {

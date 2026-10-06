@@ -18,9 +18,12 @@ use App\Notifications\Channels\SchoolMailChannel;
 use App\Notifications\DemandAwaitingYou;
 use App\Notifications\DemandDecided;
 use App\Notifications\GoodsReceived;
+use App\Notifications\OrderAwaitingReceipt;
 use App\Services\BillService;
 use App\Services\DemandService;
+use App\Services\NotificationSettingsService;
 use App\Services\OrderService;
+use App\Support\Money;
 use App\Tenancy\TenantContext;
 use Database\Seeders\NewSchoolSeeder;
 use Illuminate\Support\Facades\Notification;
@@ -185,6 +188,41 @@ class NotificationTest extends TestCase
         );
     }
 
+    public function test_placing_an_order_notifies_receiving_officers_to_verify_it(): void
+    {
+        $demand = $this->raiseDemand();
+        $service = app(DemandService::class);
+
+        foreach ([
+            'hod.science@prativa.edu.np',
+            'admin.officer@prativa.edu.np',
+            'md@prativa.edu.np',
+            'chairman@prativa.edu.np',
+        ] as $email) {
+            if ($demand->fresh()->status->value !== 'PENDING') {
+                break;
+            }
+            $service->decide($demand->id, ApprovalAction::APPROVE, $this->staff($email));
+        }
+
+        Notification::fake();
+
+        $order = app(OrderService::class)->create([
+            'demand_id' => $demand->id,
+            'vendor_name' => 'Notification Test Supplier',
+            'order_amount' => $demand->fresh()->total_amount,
+        ], $this->staff('purchase@prativa.edu.np'));
+
+        Notification::assertSentTo($this->staff('store@prativa.edu.np'), OrderAwaitingReceipt::class);
+        Notification::assertNotSentTo($this->staff('purchase@prativa.edu.np'), OrderAwaitingReceipt::class);
+        $this->assertSame('/orders?pendingReceipt=1', (new OrderAwaitingReceipt(
+            $this->tenant,
+            $order->ref,
+            $order->vendor->name,
+            Money::npr($order->order_amount),
+        ))->actionUrl());
+    }
+
     public function test_a_bill_that_matches_tells_nobody(): void
     {
         $order = $this->receivedOrder();
@@ -291,6 +329,26 @@ class NotificationTest extends TestCase
 
         $this->assertSame(0, \DB::table('jobs')->count(),
             'A notification was left sitting in the queue instead of being delivered.');
+    }
+
+    public function test_mail_configuration_resets_to_application_defaults_without_tenant_settings(): void
+    {
+        config([
+            'mail.default' => 'log',
+            'mail.mailers.smtp.host' => 'environment-mail.example',
+        ]);
+        $settings = app(NotificationSettingsService::class);
+
+        // Simulate an earlier tenant applying its own SMTP settings in this worker.
+        config([
+            'mail.default' => 'smtp',
+            'mail.mailers.smtp.host' => 'previous-school-mail.example',
+        ]);
+
+        $settings->applyMailConfig();
+
+        $this->assertSame('log', config('mail.default'));
+        $this->assertSame('environment-mail.example', config('mail.mailers.smtp.host'));
     }
 
     // ── fixtures ─────────────────────────────────────────────
