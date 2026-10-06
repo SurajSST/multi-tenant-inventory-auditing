@@ -43,7 +43,7 @@
                                     {{ $demand->raisedBy->full_name }}
                                 </td>
                                 <td class="px-4 py-3 whitespace-nowrap text-xs text-slate-500 dark:text-slate-400">
-                                    {{ $demand->closed_at?->format('d M Y, H:i') ?? $demand->updated_at->format('d M Y') }}
+                                    {{ ($demand->closed_at ?? $demand->approvals->last()?->acted_at ?? $demand->created_at)?->format('d M Y, H:i') ?? '—' }}
                                 </td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap font-semibold">
                                     <x-money :amount="$demand->total_amount" class="text-slate-900 dark:text-slate-100" />

@@ -49,7 +49,8 @@ class AppServiceProvider extends ServiceProvider
     {
         // Capability at the active school. A platform owner holds no posting,
         // so these are false for them unless a gate says otherwise below.
-        $allow = fn (Role ...$roles) => fn (User $user) => $user->hasAnyRole($roles);
+        $allow = fn (Role ...$roles) => fn (User $user) => ! $user->isPlatformOwner()
+            && $user->hasAnyRole($roles);
 
         // Reading and administering: the platform owner is included.
         $allowOrPlatform = fn (Role ...$roles) => fn (User $user) => $user->isPlatformOwner()

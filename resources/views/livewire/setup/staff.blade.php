@@ -1,9 +1,9 @@
-<div>
+<div class="mx-auto max-w-7xl space-y-5">
     <x-page-header title="Staff"
                    subtitle="There is no public registration. Every account is created here, and no login is ever shared — otherwise nothing in the audit trail means anything.">
         <x-slot:actions>
-            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Setup</x-button>
-            <x-button wire:click="newStaff">Add a member of staff</x-button>
+            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Settings & Roles</x-button>
+            <x-button wire:click="newStaff">Add staff member</x-button>
         </x-slot:actions>
     </x-page-header>
 
@@ -11,8 +11,13 @@
         <div class="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-300">{{ $message }}</div>
     @enderror
 
+    <x-field label="Search staff" for="staffSearch" class="mb-5 max-w-md">
+        <x-input id="staffSearch" type="search" wire:model.live.debounce.300ms="search" placeholder="Name, staff code, or email" />
+    </x-field>
+
     @if ($showForm)
-        <x-card class="mb-6" :title="$editingId ? 'Edit account' : 'New account'">
+        <x-sheet :title="$editingId ? 'Edit staff posting' : 'Add staff member'" wireClose="cancel" maxWidth="max-w-4xl">
+            <p class="mb-5 text-sm text-slate-500 dark:text-slate-400">Account details and permissions apply to this school only.</p>
             <form wire:submit="save">
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <x-field label="Staff code" for="staffCode" required :error="$errors->first('staffCode')">
@@ -62,18 +67,19 @@
                     </x-field>
                 </div>
 
-                <div class="mt-6">
-                    <p class="text-sm font-medium text-slate-700 dark:text-slate-300">Roles</p>
+                <div class="mt-7 border-t border-slate-200 pt-5 dark:border-white/10">
+                    <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Roles</p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Choose the actions this staff member is allowed to perform at this school.</p>
                     @error('roles') <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p> @enderror
 
-                    <div class="mt-2 grid gap-2 sm:grid-cols-2">
+                    <div class="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                         @foreach ($allRoles as $role)
-                            <label wire:key="role-{{ $role->value }}" class="flex items-start gap-2.5 rounded-lg border border-slate-200 p-3 dark:border-white/10">
+                            <label wire:key="role-{{ $role->value }}" class="group flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-3.5 transition hover:border-indigo-300 has-[:checked]:border-indigo-400 has-[:checked]:bg-indigo-50/60 dark:border-white/10 dark:bg-slate-900 dark:hover:border-sky-500/40 dark:has-[:checked]:border-sky-500/50 dark:has-[:checked]:bg-sky-500/[.06]">
                                 <input type="checkbox" value="{{ $role->value }}" wire:model="roles"
                                        class="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:text-sky-400" />
                                 <span>
                                     <span class="block text-sm font-medium text-slate-900 dark:text-slate-100">{{ $role->label() }}</span>
-                                    <span class="block text-xs leading-relaxed text-slate-500 dark:text-slate-500">{{ $role->description() }}</span>
+                                    <span class="mt-0.5 block text-xs leading-relaxed text-slate-600 dark:text-slate-400">{{ $role->description() }}</span>
                                 </span>
                             </label>
                         @endforeach
@@ -104,15 +110,18 @@
                     </p>
                 @endunless
 
-                <div class="mt-6 flex gap-2">
-                    <x-button type="submit" busy="save">{{ $editingId ? 'Save changes' : 'Create the account' }}</x-button>
-                    <x-button variant="secondary" wire:click="cancel">Cancel</x-button>
+                <div class="sticky bottom-0 -mx-5 mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-slate-900/95">
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Permissions and activity are recorded in this school’s audit trail.</p>
+                    <div class="flex gap-2">
+                        <x-button type="submit" busy="save">{{ $editingId ? 'Save changes' : 'Create the account' }}</x-button>
+                        <x-button variant="secondary" wire:click="cancel">Cancel</x-button>
+                    </div>
                 </div>
             </form>
-        </x-card>
+        </x-sheet>
     @endif
 
-    <x-card :flush="true" title="{{ $staff->count() }} account(s)">
+    <x-card :flush="true" title="{{ $staff->total() }} account(s)">
         <div class="table-scroll">
             <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-500">
@@ -179,6 +188,7 @@
                 </tbody>
             </table>
         </div>
+        <div class="border-t border-slate-200 px-5 py-3 dark:border-white/10">{{ $staff->links() }}</div>
 
         <p class="border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs leading-relaxed text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-500">
             A posting is stood down, never deleted — everything that person did here stays attributed to them.

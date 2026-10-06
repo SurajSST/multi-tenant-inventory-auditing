@@ -86,7 +86,9 @@
     </div>
 </div>
 
-<x-toast />
+@persist('toast-container')
+    <x-toast />
+@endpersist
 
 @livewireScripts
 <script>

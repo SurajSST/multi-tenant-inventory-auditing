@@ -1,8 +1,8 @@
-<div>
+<div class="mx-auto max-w-7xl space-y-5">
     <x-page-header title="Item Types"
                    subtitle="The code prefixes themselves. Each is unique across the whole school — that is what makes CHAIR.S.1 mean exactly one chair.">
         <x-slot:actions>
-            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Setup</x-button>
+            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Settings & Roles</x-button>
             <x-button wire:click="newItem">Add an item type</x-button>
         </x-slot:actions>
     </x-page-header>
@@ -30,11 +30,8 @@
                     </x-field>
 
                     <x-field label="Category" for="categoryId" required :error="$errors->first('categoryId')">
-                        <x-select id="categoryId" wire:model.live="categoryId">
-                            @foreach ($this->categories as $category)
-                                <option value="{{ $category->id }}">{{ $category->name }}</option>
-                            @endforeach
-                        </x-select>
+                        <x-search-select id="categoryId" wire:model.live="categoryId"
+                                         :options="$this->categoryOptions" placeholder="Choose category" />
                     </x-field>
 
                     <x-field label="Subcategory" for="subcategoryId" :error="$errors->first('subcategoryId')">
@@ -88,7 +85,7 @@
         </x-field>
     </x-card>
 
-    <x-card :flush="true" title="{{ $items->count() }} item type{{ $items->count() === 1 ? '' : 's' }}">
+    <x-card :flush="true" title="{{ $items->total() }} item type{{ $items->total() === 1 ? '' : 's' }}">
         <div class="table-scroll">
             <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
                 <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-500">
@@ -148,5 +145,6 @@
                 </tbody>
             </table>
         </div>
+        <div class="border-t border-slate-200 px-5 py-3 dark:border-white/10">{{ $items->links() }}</div>
     </x-card>
 </div>

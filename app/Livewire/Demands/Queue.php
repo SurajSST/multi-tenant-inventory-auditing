@@ -6,6 +6,7 @@ use App\Enums\ApprovalAction;
 use App\Services\DemandService;
 use App\Services\SettingService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -94,11 +95,13 @@ class Queue extends Component
         $this->selectAll = false;
         $this->closeBulkModal();
 
-        if ($errors) {
-            session()->flash('status', "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors)));
-        } else {
-            session()->flash('status', "Successfully approved {$approvedCount} demand form(s).");
-        }
+        $this->dispatch('toast',
+            message: $errors
+                ? "Approved {$approvedCount} demand(s). Some could not be approved: ".implode('; ', array_unique($errors))
+                : "Successfully approved {$approvedCount} demand form(s).",
+            tone: $errors ? 'warning' : 'success',
+            title: $errors ? 'Approval completed with issues' : 'Approvals recorded',
+        );
     }
 
     public function open(string $demandId, string $action): void
@@ -117,7 +120,13 @@ class Queue extends Component
 
     public function confirm(DemandService $demands): void
     {
-        $action = ApprovalAction::from($this->action);
+        $action = ApprovalAction::tryFrom($this->action);
+
+        if (! $action || ! $this->decidingId) {
+            $this->addError('decision', 'Choose a demand and a valid decision before continuing.');
+
+            return;
+        }
 
         try {
             $demand = $demands->decide(
@@ -127,29 +136,54 @@ class Queue extends Component
                 reason: $this->reason ?: null,
                 minuteRef: $this->minuteRef ?: null,
             );
-        } catch (AuthorizationException $e) {
-            $this->addError('decision', $e->getMessage());
+        } catch (AuthorizationException|ValidationException $e) {
+            if ($e instanceof ValidationException) {
+                foreach ($e->errors() as $field => $messages) {
+                    $this->addError(
+                        in_array($field, ['reason', 'minute_ref'], true) ? $field : 'decision',
+                        $messages[0],
+                    );
+                }
+            } else {
+                $this->addError('decision', $e->getMessage());
+            }
+
+            return;
+        } catch (\Throwable $e) {
+            report($e);
+
+            $this->addError('decision', 'The decision could not be recorded. Please try again. If this continues, contact your system administrator.');
 
             return;
         }
 
         $this->close();
 
-        session()->flash('status', $action === ApprovalAction::APPROVE
-            ? "{$demand->ref} approved. ".($demand->current_tier
+        $this->dispatch('toast',
+            message: $action === ApprovalAction::APPROVE
+                ? "{$demand->ref} approved. ".($demand->current_tier
                 ? "It now sits with tier {$demand->current_tier}."
                 : 'It is fully approved and ready for an order.')
-            : "{$demand->ref} rejected. The person who raised it can see your reason.");
+                : "{$demand->ref} rejected. The person who raised it can see your reason.",
+            tone: 'success',
+            title: $action === ApprovalAction::APPROVE ? 'Approval recorded' : 'Demand rejected',
+        );
     }
 
     public function render(DemandService $demands, SettingService $settings): View
     {
         $queue = $demands->myQueue(auth()->user());
+        $deciding = null;
+
+        if ($this->decidingId) {
+            $deciding = $queue->firstWhere('id', $this->decidingId)
+                ?? $demands->find($this->decidingId);
+        }
 
         return view('livewire.demands.queue', [
             'queue' => $queue,
             'tiers' => $settings->tiers(),
-            'deciding' => $this->decidingId ? $queue->firstWhere('id', $this->decidingId) : null,
+            'deciding' => $deciding,
         ])->title('My Approvals');
     }
 }

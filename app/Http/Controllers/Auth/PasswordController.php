@@ -45,6 +45,6 @@ class PasswordController extends Controller
             actor: $user,
         );
 
-        return redirect()->route('dashboard')->with('status', 'Your password has been changed.');
+        return redirect()->route('dashboard', ['notice' => 'password-updated']);
     }
 }

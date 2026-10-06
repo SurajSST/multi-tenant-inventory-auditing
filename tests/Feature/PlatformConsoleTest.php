@@ -10,9 +10,11 @@ use App\Models\ItemType;
 use App\Models\Location;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\OrderService;
 use App\Services\SettingService;
 use App\Tenancy\TenantContext;
 use Database\Seeders\TestingDataSeeder;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
@@ -79,6 +81,33 @@ class PlatformConsoleTest extends TestCase
             ->withSession([ResolveTenant::SESSION_KEY => null])
             ->get('/register')
             ->assertRedirect(route('platform.schools'));
+    }
+
+    /** The temporary school Super Admin posting must not grant operational access. */
+    public function test_platform_owner_cannot_open_workflow_routes_but_can_open_setup(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner)
+            ->get('/orders/new')
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->get('/setup/staff')
+            ->assertOk();
+
+        $this->assertFalse($owner->can('place-orders'));
+        $this->assertFalse($owner->can('receive-goods'));
+        $this->assertFalse($owner->can('handle-accounts'));
+        $this->assertFalse($owner->can('approve-demands'));
+    }
+
+    /** Service authorization also protects Livewire actions and non-HTTP callers. */
+    public function test_platform_owner_cannot_place_orders_through_the_service(): void
+    {
+        $this->expectException(AuthorizationException::class);
+
+        app(OrderService::class)->create([], $this->owner());
     }
 
     // ── the logo has to belong to this site ──────────────────

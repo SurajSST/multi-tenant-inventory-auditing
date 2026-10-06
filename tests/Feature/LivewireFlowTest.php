@@ -18,6 +18,7 @@ use App\Models\PettyCashToken;
 use App\Services\DemandService;
 use App\Services\InventoryService;
 use App\Services\OrderService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -53,7 +54,8 @@ class LivewireFlowTest extends TestCase
             ->set('lines.0.quantity', '40')
             ->set('lines.0.unit_rate', '1500')
             ->call('save')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('toast');
 
         $this->assertDatabaseHas('demand_forms', [
             'department' => 'Grade 8',
@@ -117,9 +119,26 @@ class LivewireFlowTest extends TestCase
             ->assertSee($demand->ref)
             ->call('open', $demand->id, 'APPROVE')
             ->call('confirm')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('toast');
 
         $this->assertSame(2, $demand->fresh()->current_tier);
+    }
+
+    public function test_approving_from_the_wrong_tier_shows_a_readable_error(): void
+    {
+        $demand = $this->pendingDemand();
+
+        Livewire::actingAs($this->staff('md@prativa.edu.np'))
+            ->test(Demands\Queue::class)
+            ->call('open', $demand->id, 'APPROVE')
+            ->call('confirm')
+            ->assertHasErrors('decision')
+            ->assertSee('This form is sitting at tier 1')
+            ->assertSee('role="alert"', false)
+            ->assertSee('Approve '.$demand->ref);
+
+        $this->assertSame(DemandStatus::PENDING, $demand->fresh()->status);
     }
 
     public function test_the_approval_queue_refuses_a_rejection_with_no_reason(): void
@@ -136,6 +155,24 @@ class LivewireFlowTest extends TestCase
         $this->assertSame(DemandStatus::PENDING, $demand->fresh()->status);
     }
 
+    public function test_the_orders_screen_handles_an_approved_demand_without_a_close_timestamp(): void
+    {
+        $demand = $this->pendingDemand();
+        $demands = app(DemandService::class);
+
+        foreach (['hod.science', 'admin.officer', 'md'] as $approver) {
+            $demands->decide($demand->id, ApprovalAction::APPROVE, $this->staff($approver.'@prativa.edu.np'));
+        }
+
+        $createdAt = $demand->fresh()->created_at;
+        DB::table('demand_forms')->where('id', $demand->id)->update(['closed_at' => null]);
+
+        Livewire::actingAs($this->staff('purchase@prativa.edu.np'))
+            ->test(Orders\Index::class)
+            ->assertSee($demand->ref)
+            ->assertSee($createdAt->format('d M Y, H:i'));
+    }
+
     public function test_the_count_sheet_writes_only_the_lines_that_changed(): void
     {
         $inventory = app(InventoryService::class);
@@ -150,7 +187,8 @@ class LivewireFlowTest extends TestCase
             ->set('locationId', $blockA->id)
             ->set('counts.'.$chair->id, '55')
             ->call('save')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('toast');
 
         $this->assertSame(55, $inventory->currentQuantity($chair->id, $blockA->id));
         $this->assertCount($before + 1, $inventory->history($chair->id, $blockA->id));
@@ -193,9 +231,20 @@ class LivewireFlowTest extends TestCase
             ->set('received.'.$line->id, '40')
             ->set('challanNo', 'CH-9981')
             ->call('save')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('toast');
 
         $this->assertSame($before + 40, app(InventoryService::class)->currentQuantity($chair->id, $blockA->id));
+    }
+
+    public function test_accounts_can_enter_a_bill_from_a_received_order(): void
+    {
+        $order = $this->receivedOrder();
+
+        Livewire::actingAs($this->staff('accounts@prativa.edu.np'))
+            ->test(Orders\Show::class, ['order' => $order])
+            ->assertSee('Enter bill')
+            ->assertSee(route('bills.create', ['purchaseOrderId' => $order->id]), false);
     }
 
     public function test_the_token_screen_blocks_an_amount_over_the_ceiling(): void
@@ -218,7 +267,8 @@ class LivewireFlowTest extends TestCase
             ->set('purpose', 'Exam stationery')
             ->set('billSighted', true)
             ->call('save')
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('toast');
 
         $token = PettyCashToken::where('bill_no', 'STN/778')->firstOrFail();
 
@@ -231,7 +281,8 @@ class LivewireFlowTest extends TestCase
         Livewire::actingAs($this->staff('accounts2@prativa.edu.np'))
             ->test(PettyCash\Index::class)
             ->call('pay', $token->id)
-            ->assertHasNoErrors();
+            ->assertHasNoErrors()
+            ->assertDispatched('toast');
 
         $this->assertSame(TokenStatus::PAID, $token->fresh()->status);
     }
@@ -257,6 +308,42 @@ class LivewireFlowTest extends TestCase
             ->set('tiers.0.max_amount', '10000')
             ->call('save')
             ->assertHasErrors('ladder');
+    }
+
+    public function test_mail_provider_presets_fill_connection_details_without_changing_credentials(): void
+    {
+        Livewire::actingAs($this->staff('md@prativa.edu.np'))
+            ->test(Setup\Notifications::class)
+            ->set('mailer', 'log')
+            ->set('username', 'existing@example.com')
+            ->set('password', '')
+            ->call('selectPreset', 'gmail')
+            ->assertSet('mailer', 'smtp')
+            ->assertSet('host', 'smtp.gmail.com')
+            ->assertSet('port', '587')
+            ->assertSet('encryption', 'tls')
+            ->assertSet('username', 'existing@example.com')
+            ->assertSet('password', '')
+            ->call('selectPreset', 'outlook')
+            ->assertSet('host', 'smtp-mail.outlook.com')
+            ->assertSet('port', '587')
+            ->call('selectPreset', 'microsoft365')
+            ->assertSet('host', 'smtp.office365.com')
+            ->assertSet('port', '587')
+            ->assertSet('encryption', 'tls')
+            ->call('selectPreset', 'brevo')
+            ->assertSet('host', 'smtp-relay.brevo.com')
+            ->assertSet('port', '587')
+            ->assertSet('encryption', 'tls')
+            ->call('selectPreset', 'mailgun')
+            ->assertSet('host', 'smtp.mailgun.org')
+            ->assertSet('port', '587')
+            ->assertSet('encryption', 'tls')
+            ->call('selectPreset', 'resend')
+            ->assertSet('host', 'smtp.resend.com')
+            ->assertSet('port', '465')
+            ->assertSet('encryption', 'ssl')
+            ->assertSet('username', 'resend');
     }
 
     public function test_the_staff_screen_creates_an_account_on_the_default_password(): void

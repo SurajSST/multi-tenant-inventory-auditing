@@ -18,7 +18,7 @@
         </x-field>
     </x-card>
 
-    <x-card :flush="true" title="{{ $entries->count() }} ledger entr{{ $entries->count() === 1 ? 'y' : 'ies' }}">
+    <x-card :flush="true" title="{{ $entries->total() }} ledger entr{{ $entries->total() === 1 ? 'y' : 'ies' }}">
         @if ($entries->isEmpty())
             <x-empty title="No entries yet"
                      note="An entry appears the first time an auditor counts this item, or an order for it is received." />
@@ -64,5 +64,6 @@
                 </table>
             </div>
         @endif
+        <div class="border-t border-slate-200 px-5 py-3 dark:border-white/10">{{ $entries->links() }}</div>
     </x-card>
 </div>

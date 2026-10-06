@@ -3,7 +3,9 @@
 namespace App\Notifications;
 
 use App\Models\Tenant;
+use App\Notifications\Channels\SchoolMailChannel;
 use App\Notifications\Channels\TenantDatabaseChannel;
+use App\Notifications\Channels\WebPushChannel;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -49,7 +51,7 @@ abstract class SchoolNotification extends Notification
     /** @return array<int, string> */
     public function via(object $notifiable): array
     {
-        return [TenantDatabaseChannel::class, 'mail'];
+        return [TenantDatabaseChannel::class, WebPushChannel::class, SchoolMailChannel::class];
     }
 
     /** The one-line summary, the same wording in the bell and in the email. */

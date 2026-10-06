@@ -15,6 +15,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class DemandService
@@ -56,6 +57,8 @@ class DemandService
      */
     public function create(array $lines, string $department, string $justification, User $user, ?string $needByDate = null): DemandForm
     {
+        Gate::forUser($user)->authorize('raise-demands');
+
         $tiers = $this->tiers();
 
         $prepared = collect($lines)->map(fn ($l) => [
@@ -205,6 +208,8 @@ class DemandService
         ?string $reason = null,
         ?string $minuteRef = null,
     ): DemandForm {
+        Gate::forUser($user)->authorize('approve-demands');
+
         $tiers = $this->tiers();
 
         $decided = DB::transaction(function () use ($demandId, $action, $user, $reason, $minuteRef, $tiers) {
@@ -330,6 +335,8 @@ class DemandService
 
     public function cancel(string $demandId, User $user): DemandForm
     {
+        abort_if($user->isPlatformOwner(), 403, 'Platform owners cannot withdraw school demand forms.');
+
         return DB::transaction(function () use ($demandId, $user) {
             // Same lock decide() takes. Read without it, a form could be
             // withdrawn and approved at the same moment and the two writes

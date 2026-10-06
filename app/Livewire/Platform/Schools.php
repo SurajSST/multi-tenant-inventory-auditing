@@ -196,9 +196,11 @@ class Schools extends Component
             detail: "{$tenant->name} was set up, administered by {$this->adminName} ({$this->adminEmail})",
         );
 
-        session()->flash('status', "{$tenant->name} is set up"
-            .($this->withCatalogue ? ' with the standard catalogue' : ' with an empty register')
-            .". {$this->adminName} can sign in with the default password and will be made to change it.");
+        $this->dispatch('toast',
+            message: "{$tenant->name} is set up".($this->withCatalogue ? ' with the standard catalogue' : ' with an empty register').". {$this->adminName} can sign in with the default password and will be made to change it.",
+            tone: 'success',
+            title: 'School created',
+        );
 
         $this->cancel();
     }
@@ -241,7 +243,7 @@ class Schools extends Component
             after: $tenant->only(['name', 'slug', 'short_name', 'address', 'logo_url']),
         );
 
-        session()->flash('status', "{$tenant->name} details updated successfully.");
+        $this->dispatch('toast', message: "{$tenant->name} details updated successfully.", tone: 'success', title: 'School details updated');
 
         $this->cancel();
     }
@@ -258,9 +260,13 @@ class Schools extends Component
             detail: $tenant->name.' was '.($tenant->is_active ? 'resumed' : 'suspended'),
         );
 
-        session()->flash('status', $tenant->is_active
-            ? $tenant->name.' is active again.'
-            : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.');
+        $this->dispatch('toast',
+            message: $tenant->is_active
+                ? $tenant->name.' is active again.'
+                : $tenant->name.' is suspended. Nobody there can sign in until it is resumed.',
+            tone: $tenant->is_active ? 'success' : 'warning',
+            title: $tenant->is_active ? 'School resumed' : 'School suspended',
+        );
     }
 
     /** Drop into a school and work in it as the console operator. */

@@ -52,6 +52,12 @@ class Create extends Component
         return Vendor::active()->orderBy('name')->get();
     }
 
+    #[Computed]
+    public function vendorOptions(): array
+    {
+        return $this->vendors->map(fn (Vendor $vendor) => ['value' => $vendor->id, 'label' => $vendor->name])->all();
+    }
+
     /** How far the order sits above what was approved, if at all. */
     #[Computed]
     public function overApprovedBy(): string
@@ -98,8 +104,11 @@ class Create extends Component
             'note' => $this->note ?: null,
         ], auth()->user());
 
-        session()->flash('status', "{$order->ref} placed with {$order->vendor->name}. ".
-            'Somebody other than you must verify the goods when they arrive.');
+        $this->dispatch('toast',
+            message: "{$order->ref} placed with {$order->vendor->name}. Somebody other than you must verify the goods when they arrive.",
+            tone: 'success',
+            title: 'Purchase order placed',
+        );
 
         $this->redirectRoute('orders.show', $order, navigate: true);
     }

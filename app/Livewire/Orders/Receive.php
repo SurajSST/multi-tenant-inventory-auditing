@@ -116,13 +116,13 @@ class Receive extends Component
             return;
         }
 
-        session()->flash('status', sprintf(
+        $this->dispatch('toast', message: sprintf(
             '%s verified. %d unit(s) posted into %s.%s',
             $this->order->ref,
             $result['units_posted'],
             $this->blocks->firstWhere('id', $this->locationId)->name,
             $result['partial'] ? ' The order is marked partly received.' : '',
-        ));
+        ), tone: 'success', title: 'Delivery verified');
 
         $this->redirectRoute('orders.show', $this->orderId, navigate: true);
     }

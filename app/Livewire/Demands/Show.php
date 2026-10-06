@@ -32,7 +32,7 @@ class Show extends Component
             return;
         }
 
-        session()->flash('status', 'The demand form has been withdrawn.');
+        $this->dispatch('toast', message: 'The demand form has been withdrawn.', tone: 'success', title: 'Demand withdrawn');
     }
 
     public function render(DemandService $demands, SettingService $settings): View

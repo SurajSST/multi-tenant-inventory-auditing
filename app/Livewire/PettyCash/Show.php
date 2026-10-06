@@ -21,7 +21,7 @@ class Show extends Component
     {
         $token = $petty->markPaid($this->tokenId, auth()->user());
 
-        session()->flash('status', "{$token->serial} settled.");
+        $this->dispatch('toast', message: "{$token->serial} settled.", tone: 'success', title: 'Token settled');
     }
 
     public function render(PettyCashService $petty): View

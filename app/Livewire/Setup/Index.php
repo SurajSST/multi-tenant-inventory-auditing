@@ -5,8 +5,9 @@ namespace App\Livewire\Setup;
 use App\Models\Category;
 use App\Models\ItemType;
 use App\Models\Location;
-use App\Models\User;
+use App\Models\TenantUser;
 use App\Services\SettingService;
+use App\Tenancy\TenantContext;
 use Illuminate\View\View;
 use Livewire\Component;
 
@@ -19,9 +20,10 @@ class Index extends Component
                 'categories' => Category::active()->count(),
                 'locations' => Location::active()->count(),
                 'items' => ItemType::active()->count(),
-                'staff' => User::where('is_active', true)->count(),
+                'staff' => TenantUser::where('tenant_id', app(TenantContext::class)->idOrFail())
+                    ->where('is_active', true)->count(),
                 'tiers' => $settings->tiers()->count(),
             ],
-        ])->title('Setup');
+        ])->title('Settings & Roles');
     }
 }

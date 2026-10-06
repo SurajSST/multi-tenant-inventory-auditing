@@ -17,6 +17,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class OrderService
@@ -43,6 +44,8 @@ class OrderService
      */
     public function create(array $data, User $user): PurchaseOrder
     {
+        Gate::forUser($user)->authorize('place-orders');
+
         if (empty($data['vendor_id']) && empty($data['vendor_name'])) {
             throw ValidationException::withMessages(['vendor_name' => 'Name the vendor.']);
         }
@@ -191,6 +194,8 @@ class OrderService
      */
     public function receive(string $orderId, array $lines, array $meta, User $user): array
     {
+        Gate::forUser($user)->authorize('receive-goods');
+
         $order = PurchaseOrder::with(['receipt', 'demand.lines', 'orderedBy', 'vendor'])
             ->findOrFail($orderId);
 

@@ -1,8 +1,8 @@
-<div>
+<div class="mx-auto max-w-7xl space-y-5">
     <x-page-header title="Approval Ladder"
                    subtitle="Which rupee value needs whose signature. A form always enters at the bottom band and climbs until it reaches the band its value demands.">
         <x-slot:actions>
-            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Setup</x-button>
+            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Settings & Roles</x-button>
         </x-slot:actions>
     </x-page-header>
 
@@ -22,28 +22,28 @@
 
             <div class="divide-y divide-slate-100 dark:divide-white/5">
                 @foreach ($tiers as $i => $tier)
-                    <div wire:key="tier-{{ $i }}" class="p-5">
-                        <div class="grid gap-4 lg:grid-cols-12">
-                            <x-field label="Tier" class="lg:col-span-1">
+                    <div wire:key="tier-{{ $i }}" class="bg-white px-5 py-5 transition-colors even:bg-slate-50/70 dark:bg-slate-900 dark:even:bg-white/[.02]">
+                        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-12">
+                            <x-field label="Tier" class="xl:col-span-1">
                                 <x-input type="number" min="1" wire:model="tiers.{{ $i }}.tier_no" class="tnum text-center" />
                             </x-field>
 
-                            <x-field label="From (Rs.)" class="lg:col-span-2" :error="$errors->first('tiers.'.$i.'.min_amount')">
+                            <x-field label="From (Rs.)" class="xl:col-span-2" :error="$errors->first('tiers.'.$i.'.min_amount')">
                                 <x-input type="number" step="0.01" min="0" wire:model="tiers.{{ $i }}.min_amount" class="tnum text-right" />
                             </x-field>
 
-                            <x-field label="To (Rs.)" class="lg:col-span-2"
+                            <x-field label="To (Rs.)" class="xl:col-span-2"
                                      hint="Blank means and above."
                                      :error="$errors->first('tiers.'.$i.'.max_amount')">
                                 <x-input type="number" step="0.01" min="0" wire:model="tiers.{{ $i }}.max_amount"
                                          class="tnum text-right" placeholder="and above" />
                             </x-field>
 
-                            <x-field label="Who decides" class="lg:col-span-4" :error="$errors->first('tiers.'.$i.'.decider_label')">
+                            <x-field label="Who decides" class="xl:col-span-4" :error="$errors->first('tiers.'.$i.'.decider_label')">
                                 <x-input wire:model="tiers.{{ $i }}.decider_label" placeholder="e.g. Head of Department" />
                             </x-field>
 
-                            <div class="flex items-end lg:col-span-2">
+                            <div class="flex items-end xl:col-span-2">
                                 <label class="flex items-center gap-2 pb-2 text-sm text-slate-700 dark:text-slate-300">
                                     <input type="checkbox" wire:model="tiers.{{ $i }}.requires_minute"
                                            class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 dark:border-slate-700 dark:text-sky-400" />
@@ -51,7 +51,7 @@
                                 </label>
                             </div>
 
-                            <div class="flex items-end justify-end lg:col-span-1">
+                            <div class="flex items-end justify-end xl:col-span-1">
                                 @if (count($tiers) > 1)
                                     <button type="button" wire:click="removeTier({{ $i }})"
                                             class="mb-0.5 rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-600"

@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TenantController;
 use App\Livewire;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +21,8 @@ Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
 Route::middleware('auth')->group(function () {
     Route::get('password', [PasswordController::class, 'edit'])->name('password.change');
     Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
 
     // ── which school ──────────────────────────────────────────
     // Most people hold one posting and never see the chooser: they are put
@@ -52,6 +55,7 @@ Route::middleware('auth')->group(function () {
 
     // Orders and receipts
     Route::get('orders', Livewire\Orders\Index::class)->name('orders.index');
+    Route::get('receipts', Livewire\Orders\Receipts::class)->name('receipts.index');
     Route::get('orders/new', Livewire\Orders\Create::class)
         ->middleware('role:PURCHASE_OFFICER,SUPER_ADMIN')->name('orders.create');
     Route::get('orders/{order}/receive', Livewire\Orders\Receive::class)
@@ -83,6 +87,7 @@ Route::middleware('auth')->group(function () {
         Route::get('approval-ladder', Livewire\Setup\ApprovalLadder::class)->name('ladder');
         Route::get('staff', Livewire\Setup\Staff::class)->name('staff');
         Route::get('settings', Livewire\Setup\Settings::class)->name('settings');
+        Route::get('notifications', Livewire\Setup\Notifications::class)->name('notifications');
     });
 
     // ── the platform console ──────────────────────────────────

@@ -11,6 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 /**
  * The item register itself. A code prefix is unique across the whole school —
@@ -18,7 +19,14 @@ use Livewire\Component;
  */
 class ItemTypes extends Component
 {
+    use WithPagination;
+
     public string $search = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
 
     public ?string $editingId = null;
 
@@ -85,6 +93,12 @@ class ItemTypes extends Component
     public function categories(): Collection
     {
         return Category::active()->orderBy('sort_order')->get();
+    }
+
+    #[Computed]
+    public function categoryOptions(): array
+    {
+        return $this->categories->map(fn (Category $category) => ['value' => $category->id, 'label' => $category->name])->all();
     }
 
     #[Computed]
@@ -184,7 +198,7 @@ class ItemTypes extends Component
                 .$item->name.' ('.$item->code_prefix.')',
         );
 
-        session()->flash('status', $item->name.' saved.');
+        $this->dispatch('toast', message: $item->name.' saved.', tone: 'success', title: 'Item saved');
         $this->cancel();
     }
 
@@ -200,7 +214,7 @@ class ItemTypes extends Component
             detail: $item->name.' was '.($item->is_active ? 'reactivated' : 'retired'),
         );
 
-        session()->flash('status', $item->name.' '.($item->is_active ? 'reactivated' : 'retired').'.');
+        $this->dispatch('toast', message: $item->name.' '.($item->is_active ? 'reactivated' : 'retired').'.', tone: $item->is_active ? 'success' : 'warning', title: $item->is_active ? 'Item restored' : 'Item retired');
     }
 
     public function render(): View
@@ -214,7 +228,7 @@ class ItemTypes extends Component
                         ->orWhere('code_prefix', 'like', '%'.$search.'%');
                 }))
                 ->orderBy('name')
-                ->get(),
+                ->paginate(30),
         ])->title('Item Types');
     }
 }

@@ -162,6 +162,15 @@ class Create extends Component
     }
 
     #[Computed]
+    public function itemOptions(): array
+    {
+        return $this->itemTypes->map(fn (ItemType $item) => [
+            'value' => $item->id,
+            'label' => $item->name.' ('.$item->code_prefix.') · '.$item->category->name,
+        ])->all();
+    }
+
+    #[Computed]
     public function total(): string
     {
         return Money::sum(collect($this->lines)->map(
@@ -221,8 +230,11 @@ class Create extends Component
             needByDate: $this->needByDate ?: null,
         );
 
-        session()->flash('status', "{$demand->ref} raised for ".Money::npr($demand->total_amount).
-            ". It now sits with tier {$demand->current_tier}.");
+        $this->dispatch('toast',
+            message: "{$demand->ref} raised for ".Money::npr($demand->total_amount).". It now sits with tier {$demand->current_tier}.",
+            tone: 'success',
+            title: 'Demand form submitted',
+        );
 
         $this->redirectRoute('demands.show', $demand, navigate: true);
     }

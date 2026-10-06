@@ -61,6 +61,12 @@ class Create extends Component
         return Vendor::active()->orderBy('name')->get();
     }
 
+    #[Computed]
+    public function vendorOptions(): array
+    {
+        return $this->vendors->map(fn (Vendor $vendor) => ['value' => $vendor->id, 'label' => $vendor->name])->all();
+    }
+
     /** What the bill will be judged against, shown before it is saved. */
     #[Computed]
     public function willMatch(): ?bool
@@ -114,9 +120,13 @@ class Create extends Component
             'attachment_path' => $path,
         ], auth()->user());
 
-        session()->flash('status', $bill->isFlagged()
-            ? "Bill {$bill->bill_no} is entered but FLAGGED: it does not agree with the order. It stays flagged until it is cleared in writing."
-            : "Bill {$bill->bill_no} is entered and matches the order and the approval.");
+        $this->dispatch('toast',
+            message: $bill->isFlagged()
+                ? "Bill {$bill->bill_no} is entered but flagged: it does not agree with the order. It stays flagged until it is cleared in writing."
+                : "Bill {$bill->bill_no} is entered and matches the order and the approval.",
+            tone: $bill->isFlagged() ? 'warning' : 'success',
+            title: $bill->isFlagged() ? 'Bill entered with a variance' : 'Bill entered',
+        );
 
         $this->redirectRoute('bills.index', navigate: true);
     }

@@ -48,8 +48,11 @@ class Index extends Component
 
         $this->closeClear();
 
-        session()->flash('status', "The variance on bill {$bill->bill_no} is accepted and on record against your name. ".
-            'The original three figures are unchanged.');
+        $this->dispatch('toast',
+            message: "The variance on bill {$bill->bill_no} is accepted and on record against your name. The original three figures are unchanged.",
+            tone: 'success',
+            title: 'Variance accepted',
+        );
     }
 
     public function render(BillService $bills): View

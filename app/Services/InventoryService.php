@@ -11,6 +11,8 @@ use App\Models\StockCountEntry;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -172,7 +174,7 @@ class InventoryService
      */
     public function submitCount(array $lines, User $auditor, ?CountSource $source = null, ?string $note = null): Collection
     {
-        if (! $auditor->hasAnyRole([Role::AUDITOR, Role::SUPER_ADMIN])) {
+        if ($auditor->isPlatformOwner() || ! $auditor->hasAnyRole([Role::AUDITOR, Role::SUPER_ADMIN])) {
             throw new AuthorizationException(
                 'Only an auditor assigned in Setup can enter physical counts.'
             );
@@ -400,13 +402,22 @@ class InventoryService
     /** Full history for one item type in one block, newest first. */
     public function history(string $itemTypeId, ?string $locationId = null): Collection
     {
+        return $this->historyQuery($itemTypeId, $locationId)->get();
+    }
+
+    public function historyPage(string $itemTypeId, ?string $locationId = null, int $perPage = 25): LengthAwarePaginator
+    {
+        return $this->historyQuery($itemTypeId, $locationId)->paginate($perPage);
+    }
+
+    private function historyQuery(string $itemTypeId, ?string $locationId = null): Builder
+    {
         return StockCountEntry::query()
             ->where('item_type_id', $itemTypeId)
             ->when($locationId, fn ($q) => $q->where('location_id', $locationId))
             ->with(['countedBy', 'countedBy.currentMembership', 'location', 'itemType'])
             ->orderByDesc('counted_at')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
     }
 
     /** Anything that has fallen to or below its reorder level. */

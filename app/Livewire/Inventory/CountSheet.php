@@ -129,9 +129,13 @@ class CountSheet extends Component
 
         $block = $this->blocks->firstWhere('id', $this->locationId)?->name;
 
-        session()->flash('status', $written->isEmpty()
-            ? "Nothing had changed in {$block}, so no ledger entries were written."
-            : "{$written->count()} change(s) recorded for {$block}. The previous figures are kept in the history.");
+        $this->dispatch('toast',
+            message: $written->isEmpty()
+                ? "Nothing had changed in {$block}, so no ledger entries were written."
+                : "{$written->count()} change(s) recorded for {$block}. The previous figures are kept in the history.",
+            tone: $written->isEmpty() ? 'info' : 'success',
+            title: $written->isEmpty() ? 'Stock unchanged' : 'Stock count saved',
+        );
 
         $this->note = '';
         $this->loadCurrent();

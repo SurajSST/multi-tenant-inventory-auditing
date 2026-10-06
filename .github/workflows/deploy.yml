@@ -11,7 +11,73 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: testing
+          MARIADB_DATABASE: prativa_inventory_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: prativa_inventory_test
+      DB_USERNAME: root
+      DB_PASSWORD: testing
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: sync
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: 8.4
+          tools: composer:v2
+          extensions: mbstring, xml, ctype, iconv, mysql, pdo_mysql, bcmath, fileinfo, zip, gd
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Check PHP formatting
+        run: php vendor/bin/pint --test
+
+      - name: Install frontend dependencies and build
+        run: |
+          npm ci --legacy-peer-deps
+          npm run build
+
+      - name: Run MariaDB test suite
+        run: php artisan test
+
+      - name: Verify database integrity controls
+        run: php artisan integrity:verify
+
   deploy:
+    needs: quality
     runs-on: ubuntu-latest
 
     steps:

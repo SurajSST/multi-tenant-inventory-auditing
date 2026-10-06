@@ -35,12 +35,8 @@
             </x-field>
 
             <x-field label="Category" for="categoryId">
-                <x-select id="categoryId" wire:model.live="categoryId">
-                    <option value="">Every category</option>
-                    @foreach ($categories as $category)
-                        <option value="{{ $category->id }}">{{ $category->name }}</option>
-                    @endforeach
-                </x-select>
+                <x-search-select id="categoryId" wire:model.live="categoryId"
+                                 :options="$categoryOptions" placeholder="Every category" />
             </x-field>
 
             <div class="flex items-end">

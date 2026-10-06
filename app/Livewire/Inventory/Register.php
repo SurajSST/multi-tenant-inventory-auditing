@@ -41,6 +41,8 @@ class Register extends Component
             'blocks' => $register['blocks'],
             'rows' => $register['rows'],
             'categories' => Category::active()->orderBy('sort_order')->get(),
+            'categoryOptions' => Category::active()->orderBy('sort_order')->get()
+                ->map(fn (Category $category) => ['value' => $category->id, 'label' => $category->name])->all(),
         ])->title('Stock Register');
     }
 }

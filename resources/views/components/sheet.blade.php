@@ -1,4 +1,4 @@
-@props(['title', 'wireClose' => null])
+@props(['title', 'wireClose' => null, 'maxWidth' => 'max-w-lg'])
 
 {{--
     A bottom sheet on a phone, a centred dialog on a desktop. Same markup.
@@ -10,10 +10,14 @@
     @keydown.escape.window="$wire.{{ $wireClose }}()"
     class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 backdrop-blur-sm lg:items-center lg:p-6"
     @click="$wire.{{ $wireClose }}()"
+    role="presentation"
 >
     <div
         @click.stop
-        class="animate-sheet-rise flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-white shadow-xl lg:rounded-2xl lg:border dark:border-white/10 dark:bg-slate-900"
+        role="dialog"
+        aria-modal="true"
+        aria-label="{{ $title }}"
+        class="animate-sheet-rise flex max-h-[90vh] w-full {{ $maxWidth }} flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-white shadow-xl lg:rounded-2xl lg:border dark:border-white/10 dark:bg-slate-900"
     >
         <div class="mx-auto mt-2.5 h-1 w-9 shrink-0 rounded-full bg-slate-300 lg:hidden dark:bg-slate-700"></div>
 

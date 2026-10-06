@@ -11,6 +11,7 @@ use App\Support\RefCounter;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class PettyCashService
@@ -29,6 +30,8 @@ class PettyCashService
      */
     public function issue(array $data, User $user): PettyCashToken
     {
+        Gate::forUser($user)->authorize('handle-accounts');
+
         $ceiling = $this->settings->pettyCashCeiling();
         $amount = Money::of($data['amount']);
         $billNo = trim($data['bill_no']);
@@ -133,6 +136,8 @@ class PettyCashService
     /** Whoever issued a token can never be the one who releases the payment. */
     public function markPaid(string $tokenId, User $user): PettyCashToken
     {
+        Gate::forUser($user)->authorize('handle-accounts');
+
         return DB::transaction(function () use ($tokenId, $user) {
             return $this->settle($tokenId, $user);
         });
@@ -185,6 +190,8 @@ class PettyCashService
     /** Moves a token into the Accounts review queue. */
     public function sendToAccounts(string $tokenId, User $user): PettyCashToken
     {
+        Gate::forUser($user)->authorize('handle-accounts');
+
         return DB::transaction(function () use ($tokenId, $user) {
             $token = PettyCashToken::lockForUpdate()->findOrFail($tokenId);
 
@@ -210,6 +217,8 @@ class PettyCashService
 
     public function void(string $tokenId, string $reason, User $user): PettyCashToken
     {
+        Gate::forUser($user)->authorize('handle-accounts');
+
         return DB::transaction(function () use ($tokenId, $reason, $user) {
             $token = PettyCashToken::lockForUpdate()->findOrFail($tokenId);
 

@@ -16,6 +16,13 @@ exists to enforce.
 one you raised, a delivery verified against your order, a bill that does not match — each appears in
 the in-app bell and by email. Nobody is ever notified about their own action.
 
+Email delivery is configured per school at **Setup â†’ Mail & Push Notifications**. Enter the
+school's SMTP host, port, credentials and sender, then send a test message. SMTP passwords and Web
+Push private keys are encrypted with `APP_KEY`; keep that key backed up and stable. The same setup
+page generates VAPID keys. Staff enable browser push separately on each device from the notification
+bell. Push requires HTTPS; iPhone/iPad push requires iOS/iPadOS 16.4+ and an installed Home Screen
+app. Android and desktop availability depends on browser support.
+
 **A new school chooses what it starts with.** The platform console offers a copy of the standard
 catalogue — blocks, categories, 54 item codes — or an empty register for a school with its own
 buildings and its own inventory. The approval ladder and petty cash ceiling are set up either way.

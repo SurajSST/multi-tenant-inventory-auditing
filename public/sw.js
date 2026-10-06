@@ -6,12 +6,11 @@
 // every cache whose name does not end with the current version, which is what
 // makes an existing browser let go of what it stored under the old rules —
 // including, until now, a Livewire runtime it should never have kept.
-const VERSION = 'v2';
+const VERSION = 'v4';
 const SHELL = `pss-shell-${VERSION}`;
 const ASSETS = `pss-assets-${VERSION}`;
 
 const SHELL_URLS = [
-  '/',
   '/offline.html',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
@@ -41,6 +40,28 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (_) {}
+  event.waitUntil(self.registration.showNotification(data.title || 'Prativa Stock', {
+    body: data.body || 'There is an update waiting for you.',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    data: { url: data.url || '/' },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+    for (const client of windows) {
+      if ('focus' in client) { client.navigate(url); return client.focus(); }
+    }
+    return clients.openWindow(url);
+  }));
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -51,19 +72,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 1. HTML Navigations (Network first -> Cache / Offline fallback)
+  // 1. HTML Navigations (network first -> generic offline page).
+  // Never cache authenticated HTML: Cache API keys do not distinguish users
+  // by session cookie, so a cached page could expose one person's data later.
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
-        .then((res) => {
-          if (res.ok && res.status === 200) {
-            const copy = res.clone();
-            caches.open(SHELL).then((c) => c.put(request, copy));
-          }
-          return res;
-        })
+        .then((res) => res)
         .catch(async () => {
-          return (await caches.match(request)) || (await caches.match('/offline.html'));
+          return (await caches.match('/offline.html')) || Response.error();
         }),
     );
     return;

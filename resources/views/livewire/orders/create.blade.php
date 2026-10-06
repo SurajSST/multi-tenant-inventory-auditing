@@ -62,12 +62,8 @@
                 <x-card title="The vendor">
                     <div class="grid gap-5 sm:grid-cols-2">
                         <x-field label="Existing vendor" for="vendorId" hint="Leave blank to add a new one below.">
-                            <x-select id="vendorId" wire:model.live="vendorId">
-                                <option value="">New vendor</option>
-                                @foreach ($this->vendors as $vendor)
-                                    <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                                @endforeach
-                            </x-select>
+                            <x-search-select id="vendorId" wire:model.live="vendorId"
+                                             :options="$this->vendorOptions" placeholder="New vendor" />
                         </x-field>
 
                         @if (! $vendorId)

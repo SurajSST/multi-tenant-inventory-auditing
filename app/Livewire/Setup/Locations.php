@@ -6,9 +6,19 @@ use App\Models\Location;
 use App\Services\AuditLogger;
 use Illuminate\View\View;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class Locations extends Component
 {
+    use WithPagination;
+
+    public string $search = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
     public string $name = '';
 
     public string $code = '';
@@ -55,7 +65,7 @@ class Locations extends Component
             detail: ($this->editingId ? 'Block updated: ' : 'Block added: ')."{$location->name} ({$location->code})",
         );
 
-        session()->flash('status', "{$location->name} saved.");
+        $this->dispatch('toast', message: "{$location->name} saved.", tone: 'success', title: 'Block saved');
         $this->cancel();
     }
 
@@ -71,13 +81,17 @@ class Locations extends Component
             detail: "{$location->name} was ".($location->is_active ? 'reactivated' : 'retired'),
         );
 
-        session()->flash('status', "{$location->name} ".($location->is_active ? 'reactivated' : 'retired').'.');
+        $this->dispatch('toast', message: "{$location->name} ".($location->is_active ? 'reactivated' : 'retired').'.', tone: $location->is_active ? 'success' : 'warning', title: $location->is_active ? 'Block restored' : 'Block retired');
     }
 
     public function render(): View
     {
         return view('livewire.setup.locations', [
-            'locations' => Location::withCount('counts')->orderBy('code')->get(),
+            'locations' => Location::withCount('counts')
+                ->when($this->search, fn ($query) => $query->where(fn ($q) => $q
+                    ->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('code', 'like', '%'.$this->search.'%')))
+                ->orderBy('code')->paginate(25),
         ])->title('Blocks and Locations');
     }
 }

@@ -173,7 +173,23 @@ class Notifier
                 return;
             }
 
-            Notification::send($people, $build($tenant));
+            foreach ($people as $person) {
+                $notification = $build($tenant);
+
+                try {
+                    Notification::sendNow($person, $notification);
+                } catch (Throwable $e) {
+                    // One invalid address or provider failure must not prevent
+                    // other approvers from receiving the same event.
+                    Log::warning('Could not deliver a school notification.', [
+                        'exception' => $e,
+                        'tenant_id' => $tenant->id,
+                        'recipient_id' => $person->id,
+                        'recipient_email' => $person->email,
+                        'notification' => $notification::class,
+                    ]);
+                }
+            }
         } catch (Throwable $e) {
             // The work itself already succeeded and is committed. Losing a
             // notification is worth a log line, never an exception thrown back

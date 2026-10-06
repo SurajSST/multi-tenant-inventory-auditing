@@ -23,7 +23,7 @@
     {
       "name": "Physical Count",
       "short_name": "Count",
-      "description": "Enter offline physical count for a room",
+      "description": "Open a physical count. A network connection is required to save counts.",
       "url": "/inventory/count?source=shortcut",
       "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },

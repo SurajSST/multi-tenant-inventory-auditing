@@ -138,6 +138,12 @@
                 afterwards — a change of mind has to be a new, separate entry.
             </p>
 
+            @error('decision')
+                <div role="alert" class="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
+                    {{ $message }}
+                </div>
+            @enderror
+
             <div class="mt-5 space-y-4">
                 @if ($action === 'REJECT')
                     <x-field label="Reason for rejection" for="reason" required

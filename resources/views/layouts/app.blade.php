@@ -43,7 +43,8 @@
             'Procurement' => [
                 ['Demand Forms', 'demands.index', 'M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7ZM14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8', true, 0, 'Demands'],
                 ['Approvals Queue', 'demands.queue', 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10ZM9 12l2 2 4-4', $user?->approval_tier > 0, $pendingApprovalsCount, 'Approve'],
-                ['Orders & Receipts', 'orders.index', 'M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2M15 18H9M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z', true, 0, 'Orders'],
+                ['Purchase Orders', 'orders.index', 'M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2M15 18H9M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14M17 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z', true, 0, 'Orders'],
+                ['Goods Receipts', 'receipts.index', 'M5 12h14M12 5l7 7-7 7', true, 0, 'Receipts'],
                 ['Bills & 3-Way Match', 'bills.index', 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1ZM16 8H8M16 12H8M13 16H8', $user?->can('handle-accounts'), 0, 'Bills'],
             ],
             'Treasury' => [
@@ -236,9 +237,13 @@
         {{-- Navigation Groups --}}
         <nav id="sidebar-nav" class="scroll-thin flex-1 space-y-4 overflow-y-auto px-2.5 py-3">
             @foreach ($navGroups as $group => $items)
-                <div>
-                    <p class="px-3 pb-1.5 pt-1 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-[#64748B]">{{ $group }}</p>
-                    <div class="space-y-0.5">
+                <div x-data="{ expanded: localStorage.getItem(@js('prativa.nav.'.\Illuminate\Support\Str::slug($group))) !== 'closed', toggle() { this.expanded = !this.expanded; localStorage.setItem(@js('prativa.nav.'.\Illuminate\Support\Str::slug($group)), this.expanded ? 'open' : 'closed'); } }">
+                    <button type="button" @click="toggle()" :aria-expanded="expanded"
+                            class="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-left font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400 transition hover:text-slate-700 dark:text-[#64748B] dark:hover:text-slate-200">
+                        <span>{{ $group }}</span>
+                        <svg class="size-3.5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                    </button>
+                    <div x-show="expanded" x-transition.opacity.duration.150ms class="space-y-0.5">
                         @foreach ($items as [$label, $route, $icon, $allowed, $badgeCount])
                             @php
                                 $isActive = match($route) {
@@ -249,6 +254,7 @@
                                     'demands.queue' => request()->routeIs('demands.queue*'),
                                     'demands.index' => (request()->routeIs('demands.*') && !request()->routeIs('demands.queue*')),
                                     'orders.index' => request()->routeIs('orders.*'),
+                                    'receipts.index' => request()->routeIs('receipts.*'),
                                     'bills.index' => request()->routeIs('bills.*'),
                                     'petty-cash.index' => request()->routeIs('petty-cash.*'),
                                     'setup.index' => request()->routeIs('setup.*'),
@@ -258,7 +264,7 @@
                             @endphp
                             <a href="{{ route($route) }}" wire:navigate
                                @if ($isActive) data-nav-active="true" aria-current="page" @endif
-                               class="group flex items-center gap-2.5 rounded-lg px-3 py-[8.5px] text-[13.5px] font-medium transition-all duration-150 mb-0.5
+                               class="group flex items-center gap-2.5 rounded-lg {{ $route === 'receipts.index' ? 'ml-4 pl-3' : 'px-3' }} py-[8.5px] text-[13.5px] font-medium transition-all duration-150 mb-0.5
                                       {{ $isActive
                                           ? 'bg-sky-50 text-sky-700 font-semibold shadow-2xs dark:bg-[#38BDF8]/[0.14] dark:text-[#38BDF8]'
                                           : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#94A3B8] dark:hover:bg-white/[0.06] dark:hover:text-white' }}">
@@ -388,6 +394,7 @@
                             str_starts_with($route, 'orders.create') => 'New Order',
                             str_starts_with($route, 'orders.receive') => 'Receive Goods',
                             str_starts_with($route, 'orders') => 'Orders & Receipts',
+                            str_starts_with($route, 'receipts') => 'Goods Receipts',
                             str_starts_with($route, 'bills.create') => 'Enter Bill',
                             str_starts_with($route, 'bills') => 'Bills & 3-Way Match',
                             str_starts_with($route, 'petty-cash') => 'Petty Cash',
@@ -504,12 +511,6 @@
         </header>
 
         <main class="mx-auto max-w-[1480px] w-full px-4 py-5 sm:px-6 lg:px-9 lg:py-8 flex-1">
-            @if (session('status'))
-                <div class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 no-print dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
-                    {{ session('status') }}
-                </div>
-            @endif
-
             {{ $slot }}
         </main>
     </div>
@@ -579,9 +580,13 @@
             {{-- All Nav Items --}}
             <div class="flex-1 overflow-y-auto p-4 space-y-4">
                 @foreach ($navGroups as $group => $items)
-                    <div>
-                        <p class="px-3 pb-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">{{ $group }}</p>
-                        <div class="space-y-1">
+                    <div x-data="{ expanded: localStorage.getItem(@js('prativa.nav.'.\Illuminate\Support\Str::slug($group))) !== 'closed', toggle() { this.expanded = !this.expanded; localStorage.setItem(@js('prativa.nav.'.\Illuminate\Support\Str::slug($group)), this.expanded ? 'open' : 'closed'); } }">
+                        <button type="button" @click="toggle()" :aria-expanded="expanded"
+                                class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left font-mono text-[9.5px] font-bold uppercase tracking-[0.12em] text-slate-400 dark:text-slate-500">
+                            <span>{{ $group }}</span>
+                            <svg class="size-3.5 transition-transform" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                        </button>
+                        <div x-show="expanded" x-transition.opacity.duration.150ms class="space-y-1">
                             @foreach ($items as [$label, $route, $icon, $allowed, $badgeCount])
                                 @php
                                     $isActive = match($route) {
@@ -592,6 +597,7 @@
                                         'demands.queue' => request()->routeIs('demands.queue*'),
                                         'demands.index' => (request()->routeIs('demands.*') && !request()->routeIs('demands.queue*')),
                                         'orders.index' => request()->routeIs('orders.*'),
+                                        'receipts.index' => request()->routeIs('receipts.*'),
                                         'bills.index' => request()->routeIs('bills.*'),
                                         'petty-cash.index' => request()->routeIs('petty-cash.*'),
                                         'setup.index' => request()->routeIs('setup.*'),
@@ -603,7 +609,7 @@
                                    @if ($isActive) data-nav-active="true" aria-current="page" @endif
                                    class="flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium transition
                                           {{ $isActive ? 'bg-sky-50 text-sky-600 font-semibold dark:bg-sky-500/15 dark:text-sky-300' : 'text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5' }}">
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-3 {{ $route === 'receipts.index' ? 'pl-3' : '' }}">
                                         <svg class="size-[18px] shrink-0 {{ $isActive ? 'text-sky-500' : 'text-slate-400 dark:text-slate-500' }}" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}" />
                                         </svg>
@@ -642,7 +648,9 @@
     </div>
 
     <x-command-palette :items="$paletteItems" />
-    <x-toast />
+    @persist('toast-container')
+        <x-toast />
+    @endpersist
 </div>
 
 {{-- Register PWA Service Worker & Navigation Progress Handler --}}

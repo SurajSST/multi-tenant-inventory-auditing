@@ -53,6 +53,14 @@ class Issue extends Component
     }
 
     #[Computed]
+    public function vendorOptions(): array
+    {
+        return $this->vendors->map(fn (Vendor $vendor) => ['value' => $vendor->name, 'label' => $vendor->name])
+            ->push(['value' => 'OTHER', 'label' => '+ Other / New vendor...'])
+            ->all();
+    }
+
+    #[Computed]
     public function staffMembers(): Collection
     {
         return TenantUser::with('user')
@@ -171,7 +179,7 @@ class Issue extends Component
             'bill_sighted' => $this->billSighted,
         ], auth()->user());
 
-        session()->flash('status', "Token {$token->serial} generated for ".Money::npr($token->amount).'.');
+        $this->dispatch('toast', message: "Token {$token->serial} generated for ".Money::npr($token->amount).'.', tone: 'success', title: 'Petty cash token issued');
 
         $this->redirectRoute('petty-cash.show', $token, navigate: true);
     }

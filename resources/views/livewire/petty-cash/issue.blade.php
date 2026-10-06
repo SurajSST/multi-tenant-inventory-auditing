@@ -19,13 +19,8 @@
                 </x-field>
 
                 <x-field label="Vendor / shop" for="vendorSelect" required :error="$errors->first('vendorName')">
-                    <x-select id="vendorSelect" wire:model.live="vendorSelect">
-                        <option value="">Select vendor or shop</option>
-                        @foreach ($this->vendors as $v)
-                            <option value="{{ $v->name }}">{{ $v->name }}</option>
-                        @endforeach
-                        <option value="OTHER">+ Other / New vendor...</option>
-                    </x-select>
+                    <x-search-select id="vendorSelect" wire:model.live="vendorSelect"
+                                     :options="$this->vendorOptions" placeholder="Select vendor or shop" />
                 </x-field>
 
                 @if ($vendorSelect === 'OTHER' || (! $vendorSelect && ! $this->vendors->count()))

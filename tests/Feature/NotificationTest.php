@@ -4,14 +4,17 @@ namespace Tests\Feature;
 
 use App\Enums\ApprovalAction;
 use App\Enums\ReceiptCondition;
+use App\Enums\Role;
 use App\Livewire\NotificationBell;
 use App\Models\DemandForm;
 use App\Models\ItemType;
 use App\Models\Location;
 use App\Models\Tenant;
+use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Notifications\BillFlagged;
+use App\Notifications\Channels\SchoolMailChannel;
 use App\Notifications\DemandAwaitingYou;
 use App\Notifications\DemandDecided;
 use App\Notifications\GoodsReceived;
@@ -22,6 +25,7 @@ use App\Tenancy\TenantContext;
 use Database\Seeders\NewSchoolSeeder;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -68,6 +72,47 @@ class NotificationTest extends TestCase
             $this->staff('md@prativa.edu.np'),
             DemandAwaitingYou::class,
         );
+    }
+
+    public function test_one_mail_failure_does_not_block_other_approvers_from_getting_the_bell_alert(): void
+    {
+        // Simulate an SMTP/provider failure after the in-app channel has saved
+        // its row. The next recipient must still receive the same event.
+        app()->bind(SchoolMailChannel::class, fn () => new class
+        {
+            public function send(object $notifiable, object $notification): void
+            {
+                throw new RuntimeException('Simulated SMTP failure.');
+            }
+        });
+
+        $secondApprover = User::create([
+            'full_name' => 'Second Approver',
+            'email' => 'second.approver@prativa.edu.np',
+            'password' => 'temporary-password',
+            'is_active' => true,
+            'must_reset_password' => false,
+        ]);
+        $membership = TenantUser::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => $secondApprover->id,
+            'staff_code' => 'PSS-SECOND-APPROVER',
+            'designation' => 'Second Approver',
+            'approval_tier' => 1,
+            'is_active' => true,
+        ]);
+        $membership->syncRoles([Role::APPROVER]);
+
+        $this->raiseDemand();
+
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $this->staff('hod.science@prativa.edu.np')->id,
+            'tenant_id' => $this->tenant->id,
+        ]);
+        $this->assertDatabaseHas('notifications', [
+            'notifiable_id' => $secondApprover->id,
+            'tenant_id' => $this->tenant->id,
+        ]);
     }
 
     public function test_clearing_a_band_tells_the_next_one_rather_than_the_raiser(): void

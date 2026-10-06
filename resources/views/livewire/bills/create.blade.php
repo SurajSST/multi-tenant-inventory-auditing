@@ -64,12 +64,8 @@
 
                 @unless ($this->order)
                     <x-field label="Existing vendor" for="vendorId" hint="Leave blank to add a new one.">
-                        <x-select id="vendorId" wire:model.live="vendorId">
-                            <option value="">New vendor</option>
-                            @foreach ($this->vendors as $vendor)
-                                <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
-                            @endforeach
-                        </x-select>
+                        <x-search-select id="vendorId" wire:model.live="vendorId"
+                                         :options="$this->vendorOptions" placeholder="New vendor" />
                     </x-field>
 
                     @unless ($vendorId)

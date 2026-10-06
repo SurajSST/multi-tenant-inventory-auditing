@@ -38,15 +38,14 @@ class Index extends Component
     {
         $token = $this->service->markPaid($tokenId, auth()->user());
 
-        session()->flash('status', "{$token->serial} settled — ".
-            Money::npr($token->amount)." paid to {$token->claimant_name}.");
+        $this->dispatch('toast', message: "{$token->serial} settled — ".Money::npr($token->amount)." paid to {$token->claimant_name}.", tone: 'success', title: 'Token settled');
     }
 
     public function sendToAccounts(string $tokenId): void
     {
         $token = $this->service->sendToAccounts($tokenId, auth()->user());
 
-        session()->flash('status', "{$token->serial} is now with Accounts for review.");
+        $this->dispatch('toast', message: "{$token->serial} is now with Accounts for review.", tone: 'success', title: 'Sent to Accounts');
     }
 
     public function openVoid(string $tokenId): void
@@ -67,7 +66,7 @@ class Index extends Component
 
         $this->closeVoid();
 
-        session()->flash('status', "{$token->serial} voided. It stays on record with your reason attached.");
+        $this->dispatch('toast', message: "{$token->serial} voided. It stays on record with your reason attached.", tone: 'warning', title: 'Token voided');
     }
 
     public function render(): View

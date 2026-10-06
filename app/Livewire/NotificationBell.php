@@ -2,6 +2,7 @@
 
 namespace App\Livewire;
 
+use App\Services\NotificationSettingsService;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
@@ -78,6 +79,8 @@ class NotificationBell extends Component
 
     public function render(): View
     {
-        return view('livewire.notification-bell');
+        return view('livewire.notification-bell', [
+            'pushPublicKey' => app(NotificationSettingsService::class)->publicVapidKey(),
+        ]);
     }
 }

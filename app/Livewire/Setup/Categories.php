@@ -7,9 +7,19 @@ use App\Models\Subcategory;
 use App\Services\AuditLogger;
 use Illuminate\View\View;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 class Categories extends Component
 {
+    use WithPagination;
+
+    public string $search = '';
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
     public string $name = '';
 
     public string $code = '';
@@ -62,7 +72,7 @@ class Categories extends Component
                 .$category->name.' ('.$category->code.')',
         );
 
-        session()->flash('status', $category->name.' saved.');
+        $this->dispatch('toast', message: $category->name.' saved.', tone: 'success', title: 'Category saved');
         $this->cancel();
     }
 
@@ -89,7 +99,7 @@ class Categories extends Component
         );
 
         $this->newSub[$categoryId] = '';
-        session()->flash('status', $name.' added.');
+        $this->dispatch('toast', message: $name.' added.', tone: 'success', title: 'Subcategory added');
     }
 
     /**
@@ -109,7 +119,7 @@ class Categories extends Component
             detail: $category->name.' was '.($category->is_active ? 'reactivated' : 'retired'),
         );
 
-        session()->flash('status', $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.');
+        $this->dispatch('toast', message: $category->name.' '.($category->is_active ? 'reactivated' : 'retired').'.', tone: $category->is_active ? 'success' : 'warning', title: $category->is_active ? 'Category restored' : 'Category retired');
     }
 
     public function render(): View
@@ -117,8 +127,11 @@ class Categories extends Component
         return view('livewire.setup.categories', [
             'categories' => Category::with('subcategories')
                 ->withCount('itemTypes')
+                ->when($this->search, fn ($query) => $query->where(fn ($q) => $q
+                    ->where('name', 'like', '%'.$this->search.'%')
+                    ->orWhere('code', 'like', '%'.$this->search.'%')))
                 ->orderBy('sort_order')
-                ->get(),
+                ->paginate(20),
         ])->title('Categories');
     }
 }

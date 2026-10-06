@@ -16,6 +16,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class BillService
@@ -42,6 +43,8 @@ class BillService
      */
     public function create(array $data, User $user): Bill
     {
+        Gate::forUser($user)->authorize('handle-accounts');
+
         $billNo = trim($data['bill_no']);
 
         $duplicate = Bill::where('bill_no', $billNo)->first();
@@ -194,6 +197,8 @@ class BillService
      */
     public function clearVariance(string $billId, string $note, User $user): Bill
     {
+        Gate::forUser($user)->authorize('handle-accounts');
+
         $bill = Bill::with('vendor')->findOrFail($billId);
 
         if ($bill->match_status !== MatchStatus::MISMATCH) {

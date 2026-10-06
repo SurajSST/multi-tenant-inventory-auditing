@@ -1,4 +1,36 @@
-<div class="relative" @click.outside="$wire.open && $wire.set('open', false)">
+<div class="relative" @click.outside="$wire.open && $wire.set('open', false)"
+     x-data="{
+        pushMessage: '',
+        pushError: false,
+        async push() {
+            this.pushMessage = '';
+            this.pushError = false;
+            try {
+                const vapidPublicKey = @js($pushPublicKey);
+                if (!vapidPublicKey) throw new Error('Push notifications are not configured by your administrator.');
+                if (!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('Push is not supported by this browser.');
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') throw new Error('Allow notifications in your browser settings to continue.');
+                const registration = await navigator.serviceWorker.ready;
+                const decodedKey = atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/'));
+                const applicationServerKey = Uint8Array.from(decodedKey, character => character.charCodeAt(0));
+                const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey });
+                const response = await fetch(@js(route('push-subscriptions.store')), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content || '', 'Accept': 'application/json' },
+                    body: JSON.stringify(subscription.toJSON()),
+                });
+                if (!response.ok) {
+                    const body = await response.json().catch(() => ({}));
+                    throw new Error(body.message || 'The browser could not save this device. Please retry.');
+                }
+                this.pushMessage = 'Push notifications are enabled on this device.';
+            } catch (error) {
+                this.pushError = true;
+                this.pushMessage = error.message || 'Could not enable push notifications.';
+            }
+        }
+     }">
     <button type="button" wire:click="toggle"
             class="relative grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
             aria-label="{{ $this->unread ? $this->unread.' unread notifications' : 'Notifications' }}">
@@ -27,6 +59,13 @@
                     </button>
                 @endif
             </div>
+
+            @if ($pushPublicKey)
+                <div class="border-b border-slate-100 px-4 py-2 dark:border-white/10">
+                    <button type="button" @click="push()" class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400">Enable push on this device</button>
+                    <p x-cloak x-show="pushMessage" x-text="pushMessage" role="status" class="mt-1 text-xs" :class="pushError ? 'text-rose-600 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'"></p>
+                </div>
+            @endif
 
             <div class="max-h-96 divide-y divide-slate-100 overflow-y-auto dark:divide-white/5">
                 @forelse ($this->items as $item)

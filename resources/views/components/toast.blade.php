@@ -1,11 +1,3 @@
-@props([
-    'sessionStatus' => session('status'),
-    'sessionSuccess' => session('success'),
-    'sessionError' => session('error'),
-    'sessionWarning' => session('warning'),
-    'sessionToast' => session('toast'),
-])
-
 <div
     x-data="{
         toasts: [],
@@ -49,13 +41,8 @@
                 this.add(msg, tone, title, duration);
             };
 
-            window.addEventListener('toast', (e) => {
-                if (e.detail) {
-                    this.add(e.detail.message || e.detail.text || e.detail, e.detail.tone || e.detail.type || 'ok', e.detail.title, e.detail.duration);
-                }
-            });
-
-            // Handle Livewire dispatches
+            // Livewire dispatches bubble as window events too, so subscribe only
+            // through Livewire here to avoid displaying each toast twice.
             if (window.Livewire) {
                 window.Livewire.on('toast', (data) => {
                     const payload = Array.isArray(data) ? data[0] : data;
@@ -67,21 +54,16 @@
                 });
             }
 
-            // Seed initial session flash toasts if present
-            @if ($sessionToast)
-                this.add({!! json_encode($sessionToast) !!});
-            @elseif ($sessionSuccess)
-                this.add(@js($sessionSuccess), 'ok', 'Success');
-            @elseif ($sessionError)
-                this.add(@js($sessionError), 'bad', 'Error');
-            @elseif ($sessionWarning)
-                this.add(@js($sessionWarning), 'warn', 'Attention');
-            @elseif ($sessionStatus)
-                this.add(@js($sessionStatus), 'info', 'Status Update');
-            @endif
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('notice') === 'password-updated') {
+                this.add('Your password has been changed.', 'success', 'Password updated');
+                params.delete('notice');
+                const query = params.toString();
+                window.history.replaceState({}, document.title, window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+            }
         }
     }"
-    class="pointer-events-none fixed inset-x-4 top-4 z-[9999] flex flex-col items-center gap-2.5 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end no-print"
+    class="pointer-events-none fixed inset-x-3 top-3 z-[9999] flex flex-col items-center gap-2.5 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end no-print"
     aria-live="polite"
 >
     <template x-for="t in toasts" :key="t.id">
@@ -95,7 +77,7 @@
             x-transition:leave-end="opacity-0 scale-95 -translate-y-2 sm:translate-x-4 sm:translate-y-0"
             @mouseenter="t.paused = true"
             @mouseleave="t.paused = false"
-            class="pointer-events-auto relative w-full sm:w-[380px] overflow-hidden rounded-2xl border bg-white/95 p-4 shadow-[0_12px_36px_rgba(0,0,0,0.18)] backdrop-blur-md transition-all dark:bg-[#0D1424]/95"
+            class="pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-xl border border-white/80 bg-white p-3.5 shadow-[0_18px_50px_rgba(15,23,42,0.24)] ring-1 ring-slate-900/5 transition-all dark:border-slate-700 dark:bg-slate-900 dark:ring-white/10"
             :class="{
                 'border-emerald-500/30 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-50 shadow-emerald-500/10': t.tone === 'ok' || t.tone === 'success',
                 'border-rose-500/30 dark:border-rose-500/30 text-rose-950 dark:text-rose-50 shadow-rose-500/10': t.tone === 'bad' || t.tone === 'error',
@@ -103,10 +85,17 @@
                 'border-sky-500/30 dark:border-sky-500/30 text-sky-950 dark:text-sky-50 shadow-sky-500/10': t.tone === 'info' || (!['ok','success','bad','error','warn','warning'].includes(t.tone)),
             }"
         >
-            <div class="flex items-start gap-3.5">
-                {{-- Icon Badge --}}
-                <div
-                    class="grid size-9 shrink-0 place-items-center rounded-xl shadow-inner"
+                <div class="flex items-start gap-3">
+                    <span class="absolute inset-y-0 left-0 w-1 rounded-l-xl"
+                          :class="{
+                              'bg-emerald-500': t.tone === 'ok' || t.tone === 'success',
+                              'bg-rose-500': t.tone === 'bad' || t.tone === 'error',
+                              'bg-amber-500': t.tone === 'warn' || t.tone === 'warning',
+                              'bg-sky-500': t.tone === 'info' || (!['ok','success','bad','error','warn','warning'].includes(t.tone)),
+                          }"></span>
+                    {{-- Icon Badge --}}
+                    <div
+                    class="grid size-8 shrink-0 place-items-center rounded-full"
                     :class="{
                         'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400': t.tone === 'ok' || t.tone === 'success',
                         'bg-rose-500/15 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400': t.tone === 'bad' || t.tone === 'error',
@@ -143,16 +132,16 @@
                 {{-- Content --}}
                 <div class="min-w-0 flex-1 pt-0.5">
                     <template x-if="t.title">
-                        <p class="font-heading text-[13.5px] font-bold leading-snug text-slate-900 dark:text-white" x-text="t.title"></p>
+                        <p class="font-heading text-sm font-semibold leading-snug text-slate-900 dark:text-white" x-text="t.title"></p>
                     </template>
-                    <p class="text-[12.5px] leading-relaxed text-slate-600 dark:text-slate-300" x-text="t.message"></p>
+                    <p class="mt-0.5 text-[13px] leading-snug text-slate-600 dark:text-slate-300" x-text="t.message"></p>
                 </div>
 
                 {{-- Close Button --}}
                 <button
                     type="button"
                     @click="remove(t.id)"
-                    class="grid size-7 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200 transition"
+                    class="grid size-7 shrink-0 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
                     aria-label="Dismiss notification"
                 >
                     <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">

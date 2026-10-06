@@ -35,7 +35,7 @@ class Settings extends Component
         $settings->set(SettingService::PETTY_CASH_CEILING, Money::of($this->pettyCashCeiling), $user);
         $settings->set(SettingService::ALLOW_ORDER_ABOVE_APPROVAL, $this->allowOrderAboveApproval, $user);
 
-        session()->flash('status', 'Settings saved. Tokens already issued keep the ceiling that was in force when they were created.');
+        $this->dispatch('toast', message: 'Settings saved. Tokens already issued keep the ceiling that was in force when they were created.', tone: 'success', title: 'Settings saved');
     }
 
     public function render(): View

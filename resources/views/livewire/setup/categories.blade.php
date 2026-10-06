@@ -1,13 +1,13 @@
-<div>
+<div class="mx-auto max-w-7xl space-y-5">
     <x-page-header title="Categories"
                    subtitle="How the register groups things. Each category holds any number of subcategories, and both can be added at will.">
         <x-slot:actions>
-            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Setup</x-button>
+            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Settings & Roles</x-button>
         </x-slot:actions>
     </x-page-header>
 
     <div class="grid gap-6 lg:grid-cols-3">
-        <x-card class="lg:col-span-1" :title="$editingId ? 'Edit category' : 'Add a category'">
+        <x-card class="lg:col-span-1" :title="$editingId ? 'Edit category' : 'Add a category'" subtitle="Categories group related items in the stock register.">
             <form wire:submit="save" class="space-y-5">
                 <x-field label="Name" for="name" required :error="$errors->first('name')">
                     <x-input id="name" wire:model="name" placeholder="Laboratory Equipment" />
@@ -17,7 +17,7 @@
                     <x-input id="code" wire:model="code" placeholder="LAB" class="uppercase" />
                 </x-field>
 
-                <div class="flex gap-2">
+                <div class="flex gap-2 border-t border-slate-200 pt-4 dark:border-white/10">
                     <x-button type="submit" busy="save">{{ $editingId ? 'Save changes' : 'Add category' }}</x-button>
                     @if ($editingId)
                         <x-button variant="secondary" wire:click="cancel">Cancel</x-button>
@@ -27,6 +27,9 @@
         </x-card>
 
         <div class="space-y-4 lg:col-span-2">
+            <x-field label="Search categories" for="search">
+                <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Name or code" />
+            </x-field>
             @foreach ($categories as $category)
                 <x-card wire:key="cat-{{ $category->id }}" class="{{ $category->is_active ? '' : 'opacity-60' }}">
                     <div class="flex flex-wrap items-start justify-between gap-3">
@@ -66,6 +69,7 @@
                     </form>
                 </x-card>
             @endforeach
+            <div class="rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-slate-900/5 dark:bg-slate-900 dark:ring-white/10">{{ $categories->links() }}</div>
         </div>
     </div>
 </div>

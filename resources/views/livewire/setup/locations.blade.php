@@ -1,13 +1,17 @@
-<div>
+<div class="mx-auto max-w-7xl space-y-5">
     <x-page-header title="Blocks and Locations"
                    subtitle="Where stock physically sits. New blocks can be added at any time, each with its own code prefix.">
         <x-slot:actions>
-            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Setup</x-button>
+            <x-button variant="secondary" href="{{ route('setup.index') }}" wire:navigate>Settings & Roles</x-button>
         </x-slot:actions>
     </x-page-header>
 
+    <x-field label="Search locations" for="search" class="mb-4 max-w-md">
+        <x-input id="search" type="search" wire:model.live.debounce.300ms="search" placeholder="Name or code" />
+    </x-field>
+
     <div class="grid gap-6 lg:grid-cols-3">
-        <x-card class="lg:col-span-1" :title="$editingId ? 'Edit block' : 'Add a block'">
+        <x-card class="lg:col-span-1" :title="$editingId ? 'Edit block' : 'Add a block'" subtitle="Define a place where stock is counted or stored.">
             <form wire:submit="save" class="space-y-5">
                 <x-field label="Name" for="name" required :error="$errors->first('name')">
                     <x-input id="name" wire:model="name" placeholder="Block G" />
@@ -23,7 +27,7 @@
                     <x-input id="note" wire:model="note" />
                 </x-field>
 
-                <div class="flex gap-2">
+                <div class="flex gap-2 border-t border-slate-200 pt-4 dark:border-white/10">
                     <x-button type="submit" busy="save">{{ $editingId ? 'Save changes' : 'Add block' }}</x-button>
                     @if ($editingId)
                         <x-button variant="secondary" wire:click="cancel">Cancel</x-button>
@@ -32,7 +36,7 @@
             </form>
         </x-card>
 
-        <x-card class="lg:col-span-2" :flush="true" title="{{ $locations->count() }} block(s)">
+        <x-card class="lg:col-span-2" :flush="true" title="{{ $locations->total() }} block(s)">
             <div class="table-scroll">
                 <table class="min-w-full divide-y divide-slate-200 text-sm dark:divide-white/10">
                     <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-slate-500">
@@ -73,6 +77,7 @@
                 </table>
             </div>
 
+            <div class="border-t border-slate-200 px-5 py-3 dark:border-white/10">{{ $locations->links() }}</div>
             <p class="border-t border-slate-200 bg-slate-50 px-5 py-3 text-xs leading-relaxed text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-500">
                 A block is retired rather than deleted — its ledger entries stay readable forever, and retiring it only
                 removes it from new counts and the register.

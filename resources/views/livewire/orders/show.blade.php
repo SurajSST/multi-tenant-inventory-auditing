@@ -14,6 +14,13 @@
                    :copyable="$order->ref"
                    :subtitle="$order->vendor->name . ' · against ' . $order->demand->ref">
         <x-slot:actions>
+            @can('handle-accounts')
+                @if ($receipt && ! $bill)
+                    <x-button href="{{ route('bills.create', ['purchaseOrderId' => $order->id]) }}" wire:navigate>
+                        Enter bill
+                    </x-button>
+                @endif
+            @endcan
             @can('receive-goods')
                 @if (! $receipt && $order->ordered_by_id !== auth()->id())
                     <x-button href="{{ route('orders.receive', $order) }}" wire:navigate>Verify receipt</x-button>

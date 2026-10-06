@@ -46,12 +46,9 @@
                     <div wire:key="line-{{ $line['row_id'] ?? $i }}" class="p-5">
                         <div class="grid gap-4 lg:grid-cols-12">
                             <x-field label="On the register?" class="lg:col-span-4">
-                                <x-select wire:model.live="lines.{{ $i }}.item_type_id">
-                                    <option value="">Not on the register — new item</option>
-                                    @foreach ($this->itemTypes as $item)
-                                        <option value="{{ $item->id }}">{{ $item->name }} ({{ $item->code_prefix }})</option>
-                                    @endforeach
-                                </x-select>
+                                <x-search-select wire:model.live="lines.{{ $i }}.item_type_id"
+                                                 :options="$this->itemOptions"
+                                                 placeholder="Not on register / new item" />
                             </x-field>
 
                             <x-field label="Item" class="lg:col-span-4" :error="$errors->first('lines.'.$i.'.item_name')">
