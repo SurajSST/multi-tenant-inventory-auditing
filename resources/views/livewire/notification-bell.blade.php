@@ -32,15 +32,18 @@
         }
      }">
     <button type="button" wire:click="toggle"
-            class="relative grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+            @class([
+                'relative grid size-9 place-items-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white',
+                'has-unread-notifications' => $this->unread > 0,
+            ])
             aria-label="{{ $this->unread ? $this->unread.' unread notifications' : 'Notifications' }}">
-        <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+        <svg @class(['size-5', 'notification-bell-icon' => $this->unread > 0]) fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
             <path stroke-linecap="round" stroke-linejoin="round"
                   d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5m6 0v1a3 3 0 1 1-6 0v-1m6 0H9" />
         </svg>
 
         @if ($this->unread > 0)
-            <span class="absolute -right-0.5 -top-0.5 grid min-w-4.5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white dark:ring-[#0F1623]">
+            <span class="notification-unread-badge absolute -right-0.5 -top-0.5 grid min-w-4.5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-4 text-white ring-2 ring-white dark:ring-[#0F1623]">
                 {{ $this->unread > 9 ? '9+' : $this->unread }}
             </span>
         @endif

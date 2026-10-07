@@ -84,7 +84,7 @@
             </x-card>
 
             @if ($this->demand)
-                <x-card title="The vendor">
+                <x-card title="The vendor" :allow-overflow="true">
                     <div class="grid gap-5 sm:grid-cols-2">
                         <x-field label="Existing vendor" for="vendorId" hint="Leave blank to add a new one below.">
                             <x-search-select id="vendorId" wire:model.live="vendorId"

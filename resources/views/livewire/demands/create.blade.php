@@ -36,7 +36,7 @@
             </div>
         </x-card>
 
-        <x-card title="Items" subtitle="Pick from the register where you can — that links the request to the stock ledger." :flush="true">
+        <x-card title="Items" subtitle="Pick from the register where you can — that links the request to the stock ledger." :flush="true" :allow-overflow="true">
             <x-slot:actions>
                 <x-button variant="secondary" wire:click="addLine">Add another item</x-button>
             </x-slot:actions>

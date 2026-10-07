@@ -23,7 +23,7 @@
         </x-slot:actions>
     </x-page-header>
 
-    <x-card class="mb-5 no-print">
+    <x-card class="mb-5 no-print" :allow-overflow="true">
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <x-field label="Search" for="search">
                 <x-input id="search" wire:model.live.debounce.300ms="search" placeholder="Name or code, e.g. CHAIR.S" />

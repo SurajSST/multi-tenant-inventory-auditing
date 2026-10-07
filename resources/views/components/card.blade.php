@@ -1,7 +1,7 @@
-@props(['title' => null, 'subtitle' => null, 'flush' => false])
+@props(['title' => null, 'subtitle' => null, 'flush' => false, 'allowOverflow' => false])
 
 <section {{ $attributes->merge(['class' =>
-    'overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5 transition-colors '.
+    ($allowOverflow ? 'relative z-20 overflow-visible' : 'overflow-hidden').' rounded-xl bg-white shadow-sm ring-1 ring-slate-900/5 transition-colors '.
     'dark:bg-slate-900 dark:ring-white/10'
 ]) }}>
     @if ($title)

@@ -8,7 +8,7 @@
     </x-page-header>
 
     @if ($showForm)
-        <x-card class="mb-6" :title="$editingId ? 'Edit item type' : 'New item type'">
+        <x-card class="mb-6" :title="$editingId ? 'Edit item type' : 'New item type'" :allow-overflow="true">
             <form wire:submit="save">
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <x-field label="Name" for="name" required class="lg:col-span-2" :error="$errors->first('name')">

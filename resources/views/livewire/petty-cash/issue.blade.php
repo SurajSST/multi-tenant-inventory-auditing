@@ -6,7 +6,7 @@
 
     <form wire:submit="save" class="space-y-6">
 
-        <x-card title="The bill">
+        <x-card title="The bill" :allow-overflow="true">
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-field label="Bill number" for="billNo" required
                          hint="Must not already exist as a token or in the main bill register."

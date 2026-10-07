@@ -87,6 +87,38 @@ html[data-theme='dark'] body {
     background-color: inherit;
 }
 
+/* Draw attention to unread work without animating the whole header control. */
+@keyframes notification-bell-ring {
+    0%, 72%, 100% { transform: rotate(0deg); }
+    76% { transform: rotate(10deg); }
+    80% { transform: rotate(-9deg); }
+    84% { transform: rotate(7deg); }
+    88% { transform: rotate(-5deg); }
+    92% { transform: rotate(3deg); }
+    96% { transform: rotate(0deg); }
+}
+
+@keyframes notification-badge-pulse {
+    0%, 72%, 100% { box-shadow: 0 0 0 0 rgb(244 63 94 / 0); }
+    82% { box-shadow: 0 0 0 4px rgb(244 63 94 / 22%); }
+}
+
+.has-unread-notifications .notification-bell-icon {
+    transform-origin: 50% 12%;
+    animation: notification-bell-ring 3.2s ease-in-out infinite;
+}
+
+.notification-unread-badge {
+    animation: notification-badge-pulse 3.2s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .has-unread-notifications .notification-bell-icon,
+    .notification-unread-badge {
+        animation: none;
+    }
+}
+
 .print-only {
     display: none !important;
 }

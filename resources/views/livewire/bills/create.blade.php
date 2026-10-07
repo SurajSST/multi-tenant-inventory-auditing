@@ -112,7 +112,7 @@
             @endif
         </x-card>
 
-        <x-card title="The bill">
+        <x-card title="The bill" :allow-overflow="true">
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-field label="Bill number" for="billNo" required
                          hint="Exactly as printed on the vendor's bill. Unique across the whole system."
