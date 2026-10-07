@@ -18,20 +18,10 @@ use Illuminate\Notifications\Notification;
  * skipped until the school has VAPID keys and the recipient has subscribed;
  * email uses the school's SMTP settings when configured.
  *
- * Sent inline, NOT queued — a deliberate choice, and worth the paragraph.
- *
- * Queueing these looks obviously right and is a trap here. QUEUE_CONNECTION is
- * `database`, so a queued notification is a row in `jobs` that sits there until
- * somebody runs `php artisan queue:work`. On a school server under a desk,
- * nobody ever will — the whole feature would silently do nothing while every
- * test passed, because phpunit.xml forces the queue to `sync`.
- *
- * So: written immediately. This works without a queue worker. If configured
- * SMTP proves too slow, the fix is a supervised worker plus ShouldQueue here
- * — a decision to take with a worker actually running, not before.
- *
- * Nothing is lost by not being afterCommit: Notifier is only ever called once
- * the transaction has already closed.
+ * The in-app bell is written immediately. Mail and Web Push are dispatched by
+ * DeliverSchoolNotification after the response so slow providers do not hold
+ * up the action that created this notification. The delivery job restores this
+ * notification's tenant context before invoking tenant-specific channels.
  */
 abstract class SchoolNotification extends Notification
 {

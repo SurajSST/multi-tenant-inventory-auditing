@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ApprovalAction;
 use App\Enums\ReceiptCondition;
 use App\Enums\Role;
+use App\Jobs\DeliverSchoolNotification;
 use App\Livewire\NotificationBell;
 use App\Models\DemandForm;
 use App\Models\ItemType;
@@ -14,7 +15,6 @@ use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\Vendor;
 use App\Notifications\BillFlagged;
-use App\Notifications\Channels\SchoolMailChannel;
 use App\Notifications\DemandAwaitingYou;
 use App\Notifications\DemandDecided;
 use App\Notifications\GoodsReceived;
@@ -27,8 +27,8 @@ use App\Support\Money;
 use App\Tenancy\TenantContext;
 use Database\Seeders\NewSchoolSeeder;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Livewire\Livewire;
-use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -77,17 +77,9 @@ class NotificationTest extends TestCase
         );
     }
 
-    public function test_one_mail_failure_does_not_block_other_approvers_from_getting_the_bell_alert(): void
+    public function test_outbound_delivery_is_queued_without_delaying_bell_alerts(): void
     {
-        // Simulate an SMTP/provider failure after the in-app channel has saved
-        // its row. The next recipient must still receive the same event.
-        app()->bind(SchoolMailChannel::class, fn () => new class
-        {
-            public function send(object $notifiable, object $notification): void
-            {
-                throw new RuntimeException('Simulated SMTP failure.');
-            }
-        });
+        Queue::fake();
 
         $secondApprover = User::create([
             'full_name' => 'Second Approver',
@@ -116,6 +108,10 @@ class NotificationTest extends TestCase
             'notifiable_id' => $secondApprover->id,
             'tenant_id' => $this->tenant->id,
         ]);
+        Queue::assertPushed(DeliverSchoolNotification::class, fn (DeliverSchoolNotification $job) => $job->recipientId === $this->staff('hod.science@prativa.edu.np')->id
+        );
+        Queue::assertPushed(DeliverSchoolNotification::class, fn (DeliverSchoolNotification $job) => $job->recipientId === $secondApprover->id
+        );
     }
 
     public function test_clearing_a_band_tells_the_next_one_rather_than_the_raiser(): void
@@ -305,18 +301,10 @@ class NotificationTest extends TestCase
         });
     }
 
-    /**
-     * The one that matters operationally.
-     *
-     * phpunit.xml forces QUEUE_CONNECTION=sync, but the application runs on
-     * `database`. A queued notification would therefore pass every other test
-     * in this file while, in production, only ever becoming a row in `jobs`
-     * that nobody runs a worker to drain — the feature silently doing nothing.
-     *
-     * So this one uses the real driver and insists the bell is written anyway.
-     */
+    /** The bell is immediate; outbound delivery is queued independently. */
     public function test_notifications_arrive_without_a_queue_worker_running(): void
     {
+        Queue::fake();
         config(['queue.default' => 'database']);
 
         $this->raiseDemand();
@@ -328,7 +316,8 @@ class NotificationTest extends TestCase
             'no worker runs on a school server.');
 
         $this->assertSame(0, \DB::table('jobs')->count(),
-            'A notification was left sitting in the queue instead of being delivered.');
+            'The immediate bell notification should not require an outbound worker.');
+        Queue::assertPushed(DeliverSchoolNotification::class);
     }
 
     public function test_mail_configuration_resets_to_application_defaults_without_tenant_settings(): void

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\Role;
+use App\Jobs\DeliverSchoolNotification;
 use App\Models\Bill;
 use App\Models\DemandForm;
 use App\Models\GoodsReceipt;
@@ -10,6 +11,7 @@ use App\Models\PurchaseOrder;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Notifications\BillFlagged;
+use App\Notifications\Channels\TenantDatabaseChannel;
 use App\Notifications\DemandAwaitingYou;
 use App\Notifications\DemandDecided;
 use App\Notifications\GoodsReceived;
@@ -194,11 +196,25 @@ class Notifier
                 $notification = $build($tenant);
 
                 try {
-                    Notification::sendNow($person, $notification);
+                    // The bell should update as soon as the business action is
+                    // saved. SMTP and Web Push can each wait on remote servers,
+                    // so they run in a separate queued job after this request.
+                    Notification::sendNow($person, $notification, [TenantDatabaseChannel::class]);
                 } catch (Throwable $e) {
-                    // One invalid address or provider failure must not prevent
-                    // other approvers from receiving the same event.
-                    Log::warning('Could not deliver a school notification.', [
+                    Log::warning('Could not write a school notification to the bell.', [
+                        'exception' => $e,
+                        'tenant_id' => $tenant->id,
+                        'recipient_id' => $person->id,
+                        'notification' => $notification::class,
+                    ]);
+                }
+
+                try {
+                    DeliverSchoolNotification::dispatch($tenant->id, $person->id, $notification);
+                } catch (Throwable $e) {
+                    // Notification failures must not roll back saved business
+                    // work. Log queue outages so operations can investigate.
+                    Log::warning('Could not queue outbound school notification.', [
                         'exception' => $e,
                         'tenant_id' => $tenant->id,
                         'recipient_id' => $person->id,

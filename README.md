@@ -23,6 +23,11 @@ page generates VAPID keys. Staff enable browser push separately on each device f
 bell. Push requires HTTPS; iPhone/iPad push requires iOS/iPadOS 16.4+ and an installed Home Screen
 app. Android and desktop availability depends on browser support.
 
+The in-app notification is saved with the business action. Email and Web Push are sent after the
+response through Laravel's `deferred` queue connection, so a slow provider does not hold the form
+submission open. Set `NOTIFICATION_QUEUE_CONNECTION=database` and run a supervised
+`php artisan queue:work --queue=notifications,default` process for durable delivery and retries.
+
 **A new school chooses what it starts with.** The platform console offers a copy of the standard
 catalogue — blocks, categories, 54 item codes — or an empty register for a school with its own
 buildings and its own inventory. The approval ladder and petty cash ceiling are set up either way.
