@@ -559,8 +559,8 @@
     </nav>
 
     {{-- Mobile Slide-up "More" Bottom Sheet --}}
-    <div x-show="menu" x-cloak class="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm lg:hidden" @click="menu = false">
-        <div class="w-full max-h-[88vh] flex flex-col rounded-t-2xl bg-white shadow-2xl overflow-hidden border-t border-slate-200 animate-sheet-rise dark:bg-[#0F1623] dark:border-white/10" @click.stop>
+    <div x-show="menu" x-cloak class="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 pt-[var(--safe-top)] pb-[var(--safe-bot)] backdrop-blur-sm lg:hidden" @click="menu = false">
+        <div class="flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bot)-1rem)] w-full flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-white shadow-2xl animate-sheet-rise dark:border-white/10 dark:bg-[#0F1623]" @click.stop>
             {{-- Grab Bar --}}
             <div class="mx-auto mt-3 h-1 w-10 rounded-full bg-slate-300 dark:bg-slate-700"></div>
 
@@ -590,7 +590,7 @@
             </div>
 
             {{-- All Nav Items --}}
-            <div class="flex-1 overflow-y-auto p-4 space-y-4">
+            <div class="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
                 @foreach ($navGroups as $group => $items)
                     <div x-data="{ expanded: localStorage.getItem(@js('prativa.nav.'.\Illuminate\Support\Str::slug($group))) !== 'closed', toggle() { this.expanded = !this.expanded; localStorage.setItem(@js('prativa.nav.'.\Illuminate\Support\Str::slug($group)), this.expanded ? 'open' : 'closed'); } }">
                         <button type="button" @click="toggle()" :aria-expanded="expanded"

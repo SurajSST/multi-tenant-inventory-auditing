@@ -24,7 +24,7 @@
     @keydown.down.prevent="active = Math.min(active + 1, filtered.length - 1)"
     @keydown.up.prevent="active = Math.max(active - 1, 0)"
     @keydown.enter="if (filtered[active]) window.location.href = filtered[active].url"
-    class="fixed inset-0 z-[60] flex items-start justify-center bg-slate-950/60 px-4 pt-[12vh] backdrop-blur-sm"
+    class="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-slate-950/60 px-4 pt-[calc(12vh+var(--safe-top))] pb-[var(--safe-bot)] backdrop-blur-sm"
     @click="cmdk = false"
 >
     <div @click.stop class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-white/10 dark:bg-slate-900">

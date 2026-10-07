@@ -93,7 +93,7 @@
             }
         }
     }"
-    class="pointer-events-none fixed inset-x-3 top-3 z-[9999] flex flex-col items-center gap-2.5 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end no-print"
+    class="pwa-toast pointer-events-none fixed inset-x-3 top-3 z-[9999] flex flex-col items-center gap-2.5 sm:inset-x-auto sm:right-6 sm:top-6 sm:items-end no-print"
     aria-live="polite"
 >
     <template x-for="t in toasts" :key="t.id">

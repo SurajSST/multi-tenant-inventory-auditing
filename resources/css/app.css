@@ -53,6 +53,16 @@ body {
     padding-top: calc(0.75rem + var(--safe-top));
 }
 
+.pwa-toast {
+    top: calc(0.75rem + var(--safe-top));
+}
+
+@media (min-width: 640px) {
+    .pwa-toast {
+        top: 1.5rem;
+    }
+}
+
 html[data-theme='dark'] body {
     background-color: #080C14;
     color: #F8FAFC;

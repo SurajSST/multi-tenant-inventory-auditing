@@ -8,7 +8,7 @@
 <div
     x-data
     @keydown.escape.window="$wire.{{ $wireClose }}()"
-    class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/60 backdrop-blur-sm lg:items-center lg:p-6"
+    class="pwa-sheet-overlay fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/60 pt-[var(--safe-top)] pb-[var(--safe-bot)] backdrop-blur-sm lg:items-center lg:p-6"
     @click="$wire.{{ $wireClose }}()"
     role="presentation"
 >
@@ -17,7 +17,7 @@
         role="dialog"
         aria-modal="true"
         aria-label="{{ $title }}"
-        class="animate-sheet-rise flex max-h-[90vh] w-full {{ $maxWidth }} flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-white shadow-xl lg:rounded-2xl lg:border dark:border-white/10 dark:bg-slate-900"
+        class="animate-sheet-rise flex max-h-[calc(100dvh-var(--safe-top)-var(--safe-bot)-1rem)] w-full {{ $maxWidth }} flex-col overflow-hidden rounded-t-2xl border-t border-slate-200 bg-white shadow-xl lg:max-h-[calc(100dvh-3rem)] lg:rounded-2xl lg:border dark:border-white/10 dark:bg-slate-900"
     >
         <div class="mx-auto mt-2.5 h-1 w-9 shrink-0 rounded-full bg-slate-300 lg:hidden dark:bg-slate-700"></div>
 
@@ -31,12 +31,12 @@
             </button>
         </header>
 
-        <div class="scroll-thin flex-1 overflow-y-auto p-5">
+        <div class="scroll-thin min-h-0 flex-1 overflow-y-auto overscroll-contain p-5">
             {{ $slot }}
         </div>
 
         @isset($footer)
-            <footer class="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3.5 dark:border-white/10 dark:bg-white/[.02]">
+            <footer class="flex shrink-0 flex-col-reverse items-stretch justify-end gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3.5 pb-[calc(0.875rem+var(--safe-bot))] sm:flex-row sm:items-center dark:border-white/10 dark:bg-white/[.02]">
                 {{ $footer }}
             </footer>
         @endisset

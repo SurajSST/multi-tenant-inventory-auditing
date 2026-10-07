@@ -42,7 +42,7 @@
     @if ($showForm)
         <x-sheet :title="$editingId ? 'Edit staff posting' : 'Add staff member'" wireClose="cancel" maxWidth="max-w-4xl">
             <p class="mb-5 text-sm text-slate-500 dark:text-slate-400">Account details and permissions apply to this school only.</p>
-            <form wire:submit="save">
+            <form id="staff-posting-form" wire:submit="save">
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <x-field label="Staff code" for="staffCode" required :error="$errors->first('staffCode')">
                         <x-input id="staffCode" wire:model="staffCode" placeholder="PSS-011" />
@@ -68,7 +68,7 @@
                         </x-field>
                     @endif
 
-                        <x-field label="Email" for="email" required
+                    <x-field label="Email" for="email" required
                              hint="This is how they sign in." :error="$errors->first('email')">
                         <x-input id="email" type="email" wire:model.live.debounce.300ms="email" autocomplete="email" />
                     </x-field>
@@ -150,14 +150,16 @@
                     </div>
                 @endif
 
-                <div class="sticky bottom-0 -mx-5 mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-slate-900/95">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Permissions and activity are recorded in this school’s audit trail.</p>
-                    <div class="flex gap-2">
-                        <x-button type="submit" busy="save">{{ $editingId ? 'Save changes' : 'Create the account' }}</x-button>
-                        <x-button variant="secondary" wire:click="cancel">Cancel</x-button>
+            </form>
+            <x-slot:footer>
+                <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Permissions and activity are recorded in this school’s audit trail.</p>
+                    <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                        <x-button type="submit" form="staff-posting-form" busy="save" class="w-full sm:w-auto">{{ $editingId ? 'Save changes' : 'Create account' }}</x-button>
+                        <x-button variant="secondary" wire:click="cancel" class="w-full sm:w-auto">Cancel</x-button>
                     </div>
                 </div>
-            </form>
+            </x-slot:footer>
         </x-sheet>
     @endif
 
