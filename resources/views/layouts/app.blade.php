@@ -124,10 +124,10 @@
     <div class="h-full w-full animate-pulse bg-white/30"></div>
 </div>
 
-<div class="min-h-screen lg:flex" x-data="{ menu: false, cmdk: false }" @keydown.window="if (($event.ctrlKey || $event.metaKey) && $event.key.toLowerCase() === 'k') { $event.preventDefault(); cmdk = true; }">
+<div class="app-shell min-h-screen lg:flex" x-data="{ menu: false, cmdk: false }" @keydown.window="if (($event.ctrlKey || $event.metaKey) && $event.key.toLowerCase() === 'k') { $event.preventDefault(); cmdk = true; }">
 
     {{-- Mobile Top Bar (Clean PWA Topbar) --}}
-    <header class="sticky top-0 z-30 flex items-center justify-between gap-3 bg-white/90 px-4 py-3 backdrop-blur border-b border-slate-200/80 no-print lg:hidden dark:bg-[#090D16]/90 dark:border-white/[0.06]">
+    <header class="mobile-topbar sticky top-0 z-30 flex items-center justify-between gap-3 bg-white/90 px-4 py-3 backdrop-blur border-b border-slate-200/80 no-print lg:hidden dark:bg-[#090D16]/90 dark:border-white/[0.06]">
         <div class="flex items-center gap-2.5 min-w-0">
             <div class="grid size-8 shrink-0 place-items-center rounded-lg bg-white/10 p-0.5 border border-slate-200/50 dark:border-white/10 shadow-sm overflow-hidden">
                 @if ($currentSchool?->hasCustomLogo())

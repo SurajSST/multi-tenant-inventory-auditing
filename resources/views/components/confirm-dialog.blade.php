@@ -23,7 +23,7 @@
             <section x-show="open" x-transition
                      x-on:click.stop
                      role="alertdialog" aria-modal="true" aria-labelledby="{{ $titleId }}"
-                     class="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/10 dark:bg-slate-900 dark:ring-white/10">
+                     class="w-full max-w-md overflow-hidden rounded-2xl bg-white text-left shadow-2xl ring-1 ring-slate-900/10 dark:bg-slate-900 dark:ring-white/10">
                 <div class="flex gap-4 p-5 sm:p-6">
                     <div @class([
                         'flex size-10 shrink-0 items-center justify-center rounded-full',

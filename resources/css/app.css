@@ -42,6 +42,17 @@ body {
     padding: 0;
 }
 
+.app-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* The installed iOS PWA draws its status bar over the page in translucent
+   mode. Keep the mobile toolbar below that inset so its controls stay visible. */
+.mobile-topbar {
+    padding-top: calc(0.75rem + var(--safe-top));
+}
+
 html[data-theme='dark'] body {
     background-color: #080C14;
     color: #F8FAFC;

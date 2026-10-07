@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -56,6 +57,10 @@ class Staff extends Component
 
     public string $email = '';
 
+    public string $password = '';
+
+    public string $password_confirmation = '';
+
     public string $phone = '';
 
     public array $roles = [];
@@ -67,6 +72,12 @@ class Staff extends Component
 
     /** Set when the email entered already belongs to somebody. */
     public ?string $existingPersonNote = null;
+
+    public bool $showPasswordReset = false;
+
+    public ?string $passwordResetMembershipId = null;
+
+    public string $passwordResetName = '';
 
     #[Computed]
     public function standardDesignations(): array
@@ -161,7 +172,7 @@ class Staff extends Component
     {
         $this->reset([
             'editingId', 'staffCode', 'fullName', 'designation', 'email',
-            'phone', 'roles', 'approvalTier', 'auditBlocks', 'existingPersonNote',
+            'password', 'password_confirmation', 'phone', 'roles', 'approvalTier', 'auditBlocks', 'existingPersonNote',
         ]);
 
         $this->roles = [Role::INITIATOR->value];
@@ -177,6 +188,8 @@ class Staff extends Component
     public function updatedEmail(): void
     {
         $this->existingPersonNote = null;
+        $this->password = '';
+        $this->password_confirmation = '';
 
         if ($this->editingId || ! filter_var($this->email, FILTER_VALIDATE_EMAIL)) {
             return;
@@ -199,6 +212,8 @@ class Staff extends Component
         $membership = $this->posting($membershipId, ['user', 'roleRows', 'auditScopes']);
 
         $this->editingId = $membership->id;
+        $this->password = '';
+        $this->password_confirmation = '';
         $this->staffCode = $membership->staff_code;
         $this->fullName = $membership->user->full_name;
         $this->designation = $membership->designation;
@@ -225,7 +240,8 @@ class Staff extends Component
         $this->reset([
             'editingId', 'showForm', 'staffCode', 'fullName', 'designation',
             'designationSelect', 'customDesignation',
-            'email', 'phone', 'roles', 'approvalTier', 'auditBlocks', 'existingPersonNote',
+            'email', 'password', 'password_confirmation', 'phone', 'roles', 'approvalTier', 'auditBlocks',
+            'existingPersonNote', 'showPasswordReset', 'passwordResetMembershipId', 'passwordResetName',
         ]);
     }
 
@@ -239,6 +255,8 @@ class Staff extends Component
 
         $tenant = app(TenantContext::class)->current();
         $membership = $this->editingId ? $this->posting($this->editingId) : null;
+        $existingPerson = $membership ? null : User::where('email', $this->email)->first();
+        $isNewPerson = ! $membership && ! $existingPerson;
 
         $this->validate([
             // Staff codes are this school's own; another school may use the same one.
@@ -248,6 +266,8 @@ class Staff extends Component
             'fullName' => ['required', 'string', 'max:120'],
             'designation' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email', 'max:180'],
+            'password' => [$isNewPerson ? 'nullable' : 'prohibited', 'string', Password::min(10), 'max:255'],
+            'password_confirmation' => ['required_with:password', 'same:password'],
             'phone' => ['nullable', 'string', 'max:40'],
             'roles' => ['required', 'array', 'min:1'],
             'roles.*' => [Rule::enum(Role::class)],
@@ -282,9 +302,9 @@ class Staff extends Component
                     'full_name' => $this->fullName,
                     'email' => $this->email,
                     'phone' => $this->phone ?: null,
-                    'password' => Hash::make(config('prativa.seed_password')),
+                    'password' => Hash::make($this->password !== '' ? $this->password : config('prativa.seed_password')),
                     'is_active' => true,
-                    'must_reset_password' => false,
+                    'must_reset_password' => true,
                 ]);
             } else {
                 // Name and phone belong to the person, so they are shared across
@@ -383,13 +403,39 @@ class Staff extends Component
         );
     }
 
+    public function beginPasswordReset(string $membershipId): void
+    {
+        $membership = $this->posting($membershipId, ['user']);
+        $this->passwordResetMembershipId = $membership->id;
+        $this->passwordResetName = $membership->user->full_name;
+        $this->password = '';
+        $this->password_confirmation = '';
+        $this->showPasswordReset = true;
+        $this->resetErrorBag();
+    }
+
+    public function closePasswordReset(): void
+    {
+        $this->reset(['showPasswordReset', 'passwordResetMembershipId', 'passwordResetName', 'password', 'password_confirmation']);
+        $this->resetErrorBag();
+    }
+
     public function resetPassword(string $membershipId, AuditLogger $audit): void
     {
         $membership = $this->posting($membershipId, ['user']);
+        abort_if($membership->id !== $this->passwordResetMembershipId, 404);
+
+        $this->validate([
+            'password' => ['required', 'string', Password::min(10), 'max:255'],
+            'password_confirmation' => ['required', 'same:password'],
+        ], [
+            'password_confirmation.same' => 'The password confirmation does not match.',
+        ]);
+
         $person = $membership->user;
 
         $person->forceFill([
-            'password' => Hash::make(config('prativa.seed_password')),
+            'password' => Hash::make($this->password),
             'must_reset_password' => true,
         ])->save();
 
@@ -401,7 +447,7 @@ class Staff extends Component
         );
 
         $msg = $person->full_name.
-            ' has been reset to the default password and must change it on next sign-in.'.
+            ' has a new temporary password and must change it on next sign-in.'.
             ($person->memberships()->count() > 1
                 ? ' This is their login everywhere, so it applies at every school they work at.'
                 : '');
@@ -411,6 +457,8 @@ class Staff extends Component
             tone: 'success',
             title: 'Password reset',
         );
+
+        $this->closePasswordReset();
     }
 
     public function render(): View

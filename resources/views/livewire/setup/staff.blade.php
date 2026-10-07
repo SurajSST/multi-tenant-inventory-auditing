@@ -11,6 +11,30 @@
         <div class="mb-5 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:bg-rose-500/10 dark:text-rose-300">{{ $message }}</div>
     @enderror
 
+    @if ($showPasswordReset)
+        <x-sheet title="Set a temporary password" wireClose="closePasswordReset" maxWidth="max-w-md">
+            <p class="mb-5 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                Set a temporary sign-in password for <strong class="text-slate-900 dark:text-white">{{ $passwordResetName }}</strong>.
+                They must choose a new password at their next sign-in. This changes their login at every school they work at.
+            </p>
+            <form wire:submit="resetPassword('{{ $passwordResetMembershipId }}')" class="space-y-4">
+                <x-field label="Temporary password" for="resetPassword" required hint="Use at least 10 characters." :error="$errors->first('password')">
+                    <x-input id="resetPassword" type="password" wire:model="password" autocomplete="new-password" />
+                </x-field>
+                <x-field label="Confirm temporary password" for="resetPasswordConfirmation" required :error="$errors->first('password_confirmation')">
+                    <x-input id="resetPasswordConfirmation" type="password" wire:model="password_confirmation" autocomplete="new-password" />
+                </x-field>
+                <div class="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end dark:border-white/10">
+                    <x-button variant="secondary" wire:click="closePasswordReset">Cancel</x-button>
+                    <x-button type="submit" busy="resetPassword">
+                        <span wire:loading.remove wire:target="resetPassword">Set temporary password</span>
+                        <span wire:loading wire:target="resetPassword">Saving…</span>
+                    </x-button>
+                </div>
+            </form>
+        </x-sheet>
+    @endif
+
     <x-field label="Search staff" for="staffSearch" class="mb-5 max-w-md">
         <x-input id="staffSearch" type="search" wire:model.live.debounce.300ms="search" placeholder="Name, staff code, or email" />
     </x-field>
@@ -44,9 +68,9 @@
                         </x-field>
                     @endif
 
-                    <x-field label="Email" for="email" required
+                        <x-field label="Email" for="email" required
                              hint="This is how they sign in." :error="$errors->first('email')">
-                        <x-input id="email" type="email" wire:model="email" />
+                        <x-input id="email" type="email" wire:model.live.debounce.300ms="email" autocomplete="email" />
                     </x-field>
 
                     <x-field label="Phone" for="phone" hint="Optional." :error="$errors->first('phone')">
@@ -66,6 +90,29 @@
                         </x-select>
                     </x-field>
                 </div>
+
+                @unless ($editingId)
+                    @if ($existingPersonNote)
+                        <div class="mt-5 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm leading-relaxed text-sky-900 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-200">
+                            {{ $existingPersonNote }}
+                        </div>
+                    @else
+                        <div class="mt-6 rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/[.03]">
+                            <h3 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Initial sign-in password</h3>
+                            <p class="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                                Enter a temporary password or leave both fields blank to use the configured default. The new user must change it at first sign-in.
+                            </p>
+                            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                                <x-field label="Temporary password" for="password" hint="At least 10 characters." :error="$errors->first('password')">
+                                    <x-input id="password" type="password" wire:model="password" autocomplete="new-password" />
+                                </x-field>
+                                <x-field label="Confirm password" for="password_confirmation" :error="$errors->first('password_confirmation')">
+                                    <x-input id="password_confirmation" type="password" wire:model="password_confirmation" autocomplete="new-password" />
+                                </x-field>
+                            </div>
+                        </div>
+                    @endif
+                @endunless
 
                 <div class="mt-7 border-t border-slate-200 pt-5 dark:border-white/10">
                     <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">Roles</p>
@@ -102,13 +149,6 @@
                         </div>
                     </div>
                 @endif
-
-                @unless ($editingId)
-                    <p class="mt-6 rounded-lg bg-slate-50 px-4 py-3 text-xs leading-relaxed text-slate-600 dark:bg-white/5 dark:text-slate-400">
-                        The account starts on the default password and the person is made to change it the first time
-                        they sign in. Tell them the default in person, not over a message.
-                    </p>
-                @endunless
 
                 <div class="sticky bottom-0 -mx-5 mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white/95 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-slate-900/95">
                     <p class="text-xs text-slate-500 dark:text-slate-400">Permissions and activity are recorded in this school’s audit trail.</p>
@@ -148,7 +188,7 @@
                                     <x-badge class="ml-1.5">no longer works here</x-badge>
                                 @endunless
                                 @if ($person->user->must_reset_password)
-                                    <x-badge class="ml-1.5 bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300">default password</x-badge>
+                                    <x-badge class="ml-1.5 bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300">password change required</x-badge>
                                 @endif
                                 <span class="block text-xs text-slate-500 dark:text-slate-500">{{ $person->designation }}</span>
                                 <span class="block text-xs text-slate-400 dark:text-slate-600">{{ $person->staff_code }} · {{ $person->user->email }}</span>
@@ -175,13 +215,8 @@
                                 <div class="flex flex-wrap justify-end gap-x-3 gap-y-1">
                                     <button type="button" wire:click="edit('{{ $person->id }}')"
                                             class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-400">Edit</button>
-                                    <x-confirm-dialog action="resetPassword" :params="[$person->id]"
-                                                      title="Reset this staff password?"
-                                                      :message="'Reset '.$person->user->full_name.' to the default password? They will have to change it on their next sign-in.'"
-                                                      confirm-label="Reset password" tone="primary"
-                                                      trigger-class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-500 dark:hover:text-slate-100">
-                                        Reset password
-                                    </x-confirm-dialog>
+                                    <button type="button" wire:click="beginPasswordReset('{{ $person->id }}')"
+                                            class="text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-500 dark:hover:text-slate-100">Reset password</button>
                                     @if ($person->user_id !== auth()->id())
                                         <x-confirm-dialog action="toggleActive" :params="[$person->id]"
                                                           :title="$person->is_active ? 'Deactivate this staff member?' : 'Reactivate this staff member?'"

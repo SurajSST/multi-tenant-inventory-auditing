@@ -15,11 +15,13 @@ use App\Livewire\Setup;
 use App\Models\ItemType;
 use App\Models\Location;
 use App\Models\PettyCashToken;
+use App\Models\User;
 use App\Services\DemandService;
 use App\Services\InventoryService;
 use App\Services\OrderService;
 use App\Support\NepaliDate;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -347,7 +349,7 @@ class LivewireFlowTest extends TestCase
             ->assertSet('username', 'resend');
     }
 
-    public function test_the_staff_screen_creates_an_account_on_the_default_password(): void
+    public function test_the_staff_screen_creates_an_account_on_the_configured_default_password(): void
     {
         Livewire::actingAs($this->staff('md@prativa.edu.np'))
             ->test(Setup\Staff::class)
@@ -362,9 +364,52 @@ class LivewireFlowTest extends TestCase
 
         $this->assertDatabaseHas('users', [
             'email' => 'j.tamang@prativa.edu.np',
-            'must_reset_password' => 0,
+            'must_reset_password' => 1,
             'is_active' => 1,
         ]);
+        $this->assertTrue(Hash::check(config('prativa.seed_password'), User::where('email', 'j.tamang@prativa.edu.np')->firstOrFail()->password));
+    }
+
+    public function test_the_staff_screen_accepts_a_manually_set_temporary_password(): void
+    {
+        Livewire::actingAs($this->staff('md@prativa.edu.np'))
+            ->test(Setup\Staff::class)
+            ->call('newStaff')
+            ->set('staffCode', 'PSS-012')
+            ->set('fullName', 'A. Rai')
+            ->set('designation', 'Teacher â€” Grade 9')
+            ->set('email', 'a.rai@prativa.edu.np')
+            ->set('password', 'SchoolTemp!2026')
+            ->set('password_confirmation', 'SchoolTemp!2026')
+            ->set('roles', ['INITIATOR'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $newUser = User::where('email', 'a.rai@prativa.edu.np')->firstOrFail();
+        $this->assertTrue(Hash::check('SchoolTemp!2026', $newUser->password));
+        $this->assertTrue($newUser->must_reset_password);
+    }
+
+    public function test_staff_password_reset_accepts_a_confirmed_manual_temporary_password(): void
+    {
+        $target = $this->staff('p.karki@prativa.edu.np');
+        $membership = $target->membershipFor($this->tenant);
+
+        Livewire::actingAs($this->staff('md@prativa.edu.np'))
+            ->test(Setup\Staff::class)
+            ->call('beginPasswordReset', $membership->id)
+            ->assertSet('showPasswordReset', true)
+            ->assertSee('Set a temporary password')
+            ->assertSee('changes their login at every school')
+            ->set('password', 'ResetTemp!2083')
+            ->set('password_confirmation', 'ResetTemp!2083')
+            ->call('resetPassword', $membership->id)
+            ->assertHasNoErrors()
+            ->assertSet('showPasswordReset', false);
+
+        $target->refresh();
+        $this->assertTrue(Hash::check('ResetTemp!2083', $target->password));
+        $this->assertTrue($target->must_reset_password);
     }
 
     public function test_the_staff_screen_refuses_standing_yourself_down(): void
