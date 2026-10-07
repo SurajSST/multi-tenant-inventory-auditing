@@ -7,13 +7,12 @@ return [
     |--------------------------------------------------------------------------
     |
     | The database bell is written during the request. Email and browser push
-    | are dispatched separately, after the response by default. Set this to
-    | `database` when a supervised Laravel queue worker is available for
-    | durable, retryable delivery.
+    | are dispatched to a durable database queue. A supervised worker or the
+    | scheduled short-running worker must drain it for delivery and retries.
     |
     */
 
-    'connection' => env('NOTIFICATION_QUEUE_CONNECTION', 'deferred'),
+    'connection' => env('NOTIFICATION_QUEUE_CONNECTION', 'database'),
 
     'queue' => env('NOTIFICATION_QUEUE', 'notifications'),
 ];

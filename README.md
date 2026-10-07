@@ -23,10 +23,13 @@ page generates VAPID keys. Staff enable browser push separately on each device f
 bell. Push requires HTTPS; iPhone/iPad push requires iOS/iPadOS 16.4+ and an installed Home Screen
 app. Android and desktop availability depends on browser support.
 
-The in-app notification is saved with the business action. Email and Web Push are sent after the
-response through Laravel's `deferred` queue connection, so a slow provider does not hold the form
-submission open. Set `NOTIFICATION_QUEUE_CONNECTION=database` and run a supervised
-`php artisan queue:work --queue=notifications,default` process for durable delivery and retries.
+The in-app notification is saved with the business action. Email and Web Push are stored in the
+database queue, so a slow provider does not hold the form submission open and delivery jobs survive
+request or process restarts. The Laravel scheduler drains the `notifications` queue in short batches.
+Configure the host to run `php artisan schedule:run` once per minute. On cPanel, add a cron entry like
+`* * * * * cd /path/to/app && php artisan schedule:run >> /dev/null 2>&1`, replacing `/path/to/app`
+with the deployed project path. A supervised `php artisan queue:work --queue=notifications,default`
+worker can be used instead when the host supports long-running processes.
 
 **A new school chooses what it starts with.** The platform console offers a copy of the standard
 catalogue — blocks, categories, 54 item codes — or an empty register for a school with its own

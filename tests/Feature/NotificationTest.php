@@ -108,7 +108,8 @@ class NotificationTest extends TestCase
             'notifiable_id' => $secondApprover->id,
             'tenant_id' => $this->tenant->id,
         ]);
-        Queue::assertPushed(DeliverSchoolNotification::class, fn (DeliverSchoolNotification $job) => $job->recipientId === $this->staff('hod.science@prativa.edu.np')->id
+        Queue::assertPushed(DeliverSchoolNotification::class, fn (DeliverSchoolNotification $job) => $job->connection === 'database'
+            && $job->recipientId === $this->staff('hod.science@prativa.edu.np')->id
         );
         Queue::assertPushed(DeliverSchoolNotification::class, fn (DeliverSchoolNotification $job) => $job->recipientId === $secondApprover->id
         );

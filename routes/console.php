@@ -37,3 +37,10 @@ Artisan::command('integrity:audit', function () {
 })->purpose('Audit and verify database integrity constraints and triggers');
 
 Schedule::command('integrity:audit')->dailyAt('02:00');
+
+// Shared hosting often cannot keep a queue worker running. Drain outbound
+// notifications in a short batch each minute; every job remains durable in
+// the database between scheduler runs and can retry failed provider calls.
+Schedule::command('queue:work database --queue=notifications --stop-when-empty --max-time=50 --tries=3')
+    ->everyMinute()
+    ->withoutOverlapping(2);
