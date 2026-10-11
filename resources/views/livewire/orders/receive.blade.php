@@ -132,7 +132,7 @@
                         </div>
                         <div class="flex items-center gap-3">
                             <x-button variant="secondary" href="{{ route('orders.show', $this->order) }}" wire:navigate>Cancel</x-button>
-                            <x-button type="submit">Verify & post to stock</x-button>
+                            <x-button type="submit" busy="save">Verify & post to stock</x-button>
                         </div>
                     </div>
                 </x-slot:footer>

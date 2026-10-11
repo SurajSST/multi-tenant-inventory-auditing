@@ -230,6 +230,7 @@ class LivewireFlowTest extends TestCase
 
         Livewire::actingAs($this->staff('store@prativa.edu.np'))
             ->test(Orders\Receive::class, ['order' => $order])
+            ->assertSee('Verify & post to stock', false)
             ->set('locationId', $blockA->id)
             ->set('received.'.$line->id, '40')
             ->set('challanNo', 'CH-9981')

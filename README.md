@@ -41,6 +41,10 @@ publicly.
 
 Laravel 13 · PHP 8.4 · MariaDB · Livewire 4 · Tailwind 4.
 
+## Client documentation
+
+The client documentation pack is in [`docs/`](docs/README.md): a [staff user manual](docs/USER_GUIDE.md), [project documentation](docs/PROJECT_DOCUMENTATION.md), and an [administrator and operations guide](docs/ADMIN_AND_OPERATIONS_GUIDE.md).
+
 ---
 
 ## Getting it running

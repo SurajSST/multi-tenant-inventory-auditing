@@ -19,4 +19,10 @@
     @endif
 
     <div class="{{ $flush ? '' : 'p-5' }}">{{ $slot }}</div>
+
+    @isset($footer)
+        <footer class="border-t border-slate-200 bg-black/[.015] px-5 py-3.5 dark:border-white/10 dark:bg-white/[.02]">
+            {{ $footer }}
+        </footer>
+    @endisset
 </section>

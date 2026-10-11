@@ -114,7 +114,7 @@
                         </div>
                         <div class="flex items-center gap-3">
                             <x-button variant="secondary" href="{{ route('bills.index') }}" wire:navigate>Cancel</x-button>
-                            <x-button type="submit">Record Payment Voucher</x-button>
+                            <x-button type="submit" busy="save">Record Payment Voucher</x-button>
                         </div>
                     </div>
                 </x-slot:footer>
