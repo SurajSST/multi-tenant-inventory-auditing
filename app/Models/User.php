@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\Role;
+use App\Notifications\ResetPasswordNotification;
 use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -48,6 +49,11 @@ class User extends Authenticatable
             'must_reset_password' => 'boolean',
             'last_login_at' => 'datetime',
         ];
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     // ── postings ─────────────────────────────────────────────
@@ -234,6 +240,11 @@ class User extends Authenticatable
     public function demandsRaised(): HasMany
     {
         return $this->hasMany(DemandForm::class, 'raised_by_id');
+    }
+
+    public function demandsRequested(): HasMany
+    {
+        return $this->hasMany(DemandForm::class, 'requested_by_id');
     }
 
     public function approvals(): HasMany

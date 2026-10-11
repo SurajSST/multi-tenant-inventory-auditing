@@ -256,7 +256,14 @@
         </tr>
         <tr>
             <td class="meta-label">Requested By:</td>
-            <td class="meta-val">{{ $demand->raisedBy->full_name }} ({{ $demand->raisedBy->designation }})</td>
+            <td class="meta-val">
+                @if ($demand->requested_by_id && $demand->requested_by_id !== $demand->raised_by_id && $demand->requestedBy)
+                    <strong>{{ $demand->requestedBy->full_name }}</strong> ({{ $demand->requestedBy->designation ?? 'Staff' }})
+                    <div style="font-size: 9px; color: #64748b;">Submitted via: {{ $demand->raisedBy->full_name }} ({{ $demand->raisedBy->designation }})</div>
+                @else
+                    {{ $demand->raisedBy->full_name }} ({{ $demand->raisedBy->designation }})
+                @endif
+            </td>
             <td class="meta-label">Needed By Date:</td>
             <td class="meta-val">{{ $demand->need_by_date ? $demand->need_by_date->format('d M Y') : 'Normal / As Scheduled' }}</td>
         </tr>
@@ -366,7 +373,12 @@
             <tr>
                 <td class="text-center">1</td>
                 <td><strong>Requisition Raised</strong></td>
-                <td>{{ $demand->raisedBy->full_name }}<br><span style="color:#64748b; font-size: 9px;">{{ $demand->raisedBy->designation }}</span></td>
+                <td>
+                    {{ $demand->raisedBy->full_name }}<br><span style="color:#64748b; font-size: 9px;">{{ $demand->raisedBy->designation }}</span>
+                    @if ($demand->requested_by_id && $demand->requested_by_id !== $demand->raised_by_id && $demand->requestedBy)
+                        <div style="color: #4338ca; font-size: 9px; font-weight: 600; margin-top: 2px;">On behalf of: {{ $demand->requestedBy->full_name }} ({{ $demand->requestedBy->designation ?? 'Staff' }})</div>
+                    @endif
+                </td>
                 <td>Raised for department: {{ $demand->department }}</td>
                 <td class="text-right">{{ $demand->created_at->format('d M Y, H:i') }}</td>
             </tr>
@@ -427,17 +439,35 @@
     @php
         $finalApproval = $demand->approvals->where('tier_no', $demand->final_tier)->first();
         $tier1Approval = $demand->approvals->first();
+        $hasSeparateRequester = $demand->requested_by_id && $demand->requested_by_id !== $demand->raised_by_id && $demand->requestedBy;
     @endphp
 
     <table class="signatures-table">
         <tr>
-            <td>
-                <div class="sig-line">
-                    <p class="sig-role">Requisitioned By</p>
-                    <p class="sig-name">{{ $demand->raisedBy->full_name }}</p>
-                    <p class="sig-date">{{ $demand->raisedBy->designation }} · {{ $demand->created_at->format('d M Y') }}</p>
-                </div>
-            </td>
+            @if ($hasSeparateRequester)
+                <td>
+                    <div class="sig-line">
+                        <p class="sig-role">Demanded By (मागकर्ता)</p>
+                        <p class="sig-name">{{ $demand->requestedBy->full_name }}</p>
+                        <p class="sig-date">{{ $demand->requestedBy->designation ?? 'Staff Member' }} · {{ $demand->created_at->format('d M Y') }}</p>
+                    </div>
+                </td>
+                <td>
+                    <div class="sig-line">
+                        <p class="sig-role">Prepared By (पेशकर्ता)</p>
+                        <p class="sig-name">{{ $demand->raisedBy->full_name }}</p>
+                        <p class="sig-date">{{ $demand->raisedBy->designation }} · {{ $demand->created_at->format('d M Y') }}</p>
+                    </div>
+                </td>
+            @else
+                <td>
+                    <div class="sig-line">
+                        <p class="sig-role">Requisitioned By (मागकर्ता)</p>
+                        <p class="sig-name">{{ $demand->raisedBy->full_name }}</p>
+                        <p class="sig-date">{{ $demand->raisedBy->designation }} · {{ $demand->created_at->format('d M Y') }}</p>
+                    </div>
+                </td>
+            @endif
             <td>
                 <div class="sig-line">
                     <p class="sig-role">Tier 1 Verification</p>
@@ -445,13 +475,15 @@
                     <p class="sig-date">{{ $tier1Approval ? $tier1Approval->acted_at->format('d M Y') : 'Date: _______________' }}</p>
                 </div>
             </td>
-            <td>
-                <div class="sig-line">
-                    <p class="sig-role">Internal Audit / Accounts</p>
-                    <p class="sig-name">Budget Verified</p>
-                    <p class="sig-date">Date: _______________</p>
-                </div>
-            </td>
+            @if (! $hasSeparateRequester)
+                <td>
+                    <div class="sig-line">
+                        <p class="sig-role">Internal Audit / Accounts</p>
+                        <p class="sig-name">Budget Verified</p>
+                        <p class="sig-date">Date: _______________</p>
+                    </div>
+                </td>
+            @endif
             <td>
                 <div class="sig-line">
                     <p class="sig-role">Approved By (Principal)</p>

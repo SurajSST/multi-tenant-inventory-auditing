@@ -329,6 +329,9 @@
                             <div class="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 text-xs">
                                 <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy?->full_name ?? 'Staff' }}</span>
                                 <span class="text-slate-500 dark:text-slate-400">· {{ $demand->raisedBy?->designation ?? 'Member' }}</span>
+                                @if ($demand->requestedBy && $demand->requested_by_id !== $demand->raised_by_id)
+                                    <span class="font-medium text-sky-600 dark:text-sky-400">· on behalf of {{ $demand->requestedBy->full_name }}@if ($demand->requestedBy->designation) ({{ $demand->requestedBy->designation }})@endif</span>
+                                @endif
                             </div>
                         </div>
                     </li>
@@ -491,14 +494,28 @@
     </div>
 
     @php
-        $demandSignatures = [
-            [
+        $demandSignatures = [];
+        if ($demand->requested_by_id && $demand->requested_by_id !== $demand->raised_by_id && $demand->requestedBy) {
+            $demandSignatures[] = [
+                'role' => 'Demanded By (मागकर्ता)',
+                'name' => $demand->requestedBy?->full_name ?? 'Staff',
+                'designation' => $demand->requestedBy?->designation ?? 'Staff Member',
+                'date' => $demand->created_at?->format('d M Y'),
+            ];
+            $demandSignatures[] = [
+                'role' => 'Prepared / Submitted By (पेशकर्ता)',
+                'name' => $demand->raisedBy?->full_name ?? 'Store / Initiator',
+                'designation' => $demand->raisedBy?->designation ?? 'Demand Initiator',
+                'date' => $demand->created_at?->format('d M Y'),
+            ];
+        } else {
+            $demandSignatures[] = [
                 'role' => 'Demanded By (मागकर्ता)',
                 'name' => $demand->raisedBy?->full_name ?? 'Staff',
                 'designation' => $demand->raisedBy?->designation ?? '',
                 'date' => $demand->created_at?->format('d M Y'),
-            ],
-        ];
+            ];
+        }
 
         if ($demand->approvals->isNotEmpty()) {
             foreach ($demand->approvals as $approval) {

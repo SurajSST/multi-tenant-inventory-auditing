@@ -100,6 +100,51 @@ class SeparationOfDutiesTest extends TestCase
         ]);
     }
 
+    public function test_the_person_a_form_was_requested_for_cannot_decide_on_it(): void
+    {
+        $teacher = $this->staff('p.karki@prativa.edu.np');
+        $md = $this->staff('md@prativa.edu.np');
+        $demands = app(DemandService::class);
+        $chair = ItemType::where('code_prefix', 'CHAIR.S')->firstOrFail();
+
+        // Initiator creates demand on behalf of MD
+        $demand = $demands->create(
+            lines: [['item_type_id' => $chair->id, 'item_name' => $chair->name, 'quantity' => 2, 'unit_rate' => 1500]],
+            department: 'Administration',
+            justification: 'Requested on behalf of MD for administrative office.',
+            user: $teacher,
+            requestedById: $md->id,
+        );
+
+        $this->expectException(AuthorizationException::class);
+        $demands->decide($demand->id, ApprovalAction::APPROVE, $md);
+    }
+
+    public function test_the_database_refuses_beneficiary_approval_even_without_the_service(): void
+    {
+        $teacher = $this->staff('p.karki@prativa.edu.np');
+        $md = $this->staff('md@prativa.edu.np');
+        $chair = ItemType::where('code_prefix', 'CHAIR.S')->firstOrFail();
+
+        $demand = app(DemandService::class)->create(
+            lines: [['item_type_id' => $chair->id, 'item_name' => $chair->name, 'quantity' => 2, 'unit_rate' => 1500]],
+            department: 'Administration',
+            justification: 'Requested on behalf of MD.',
+            user: $teacher,
+            requestedById: $md->id,
+        );
+
+        $this->expectException(QueryException::class);
+
+        DB::table('demand_approvals')->insert([
+            'id' => (string) Str::uuid(),
+            'demand_id' => $demand->id,
+            'tier_no' => 1,
+            'actor_id' => $md->id,
+            'action' => 'APPROVE',
+        ]);
+    }
+
     public function test_an_approver_cannot_decide_at_the_wrong_tier(): void
     {
         $demands = app(DemandService::class);

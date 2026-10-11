@@ -17,7 +17,7 @@ class DemandForm extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'tenant_id', 'ref', 'fiscal_year', 'raised_by_id', 'department', 'justification',
+        'tenant_id', 'ref', 'fiscal_year', 'raised_by_id', 'requested_by_id', 'department', 'justification',
         'need_by_date', 'total_amount', 'status', 'current_tier', 'final_tier',
     ];
 
@@ -37,6 +37,11 @@ class DemandForm extends Model
     public function raisedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'raised_by_id');
+    }
+
+    public function requestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by_id');
     }
 
     public function lines(): HasMany

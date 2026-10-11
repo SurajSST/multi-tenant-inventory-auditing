@@ -114,10 +114,11 @@ class IntegrityRules
                FOR EACH ROW
              BEGIN
                DECLARE requester CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
-               SELECT raised_by_id INTO requester FROM demand_forms WHERE id = NEW.demand_id;
-               IF requester = NEW.actor_id THEN
+               DECLARE beneficiary CHAR(36) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+               SELECT raised_by_id, requested_by_id INTO requester, beneficiary FROM demand_forms WHERE id = NEW.demand_id;
+               IF requester = NEW.actor_id OR (beneficiary IS NOT NULL AND beneficiary = NEW.actor_id) THEN
                  SIGNAL SQLSTATE '45000'
-                   SET MESSAGE_TEXT = 'A person cannot decide on a demand form they raised.';
+                   SET MESSAGE_TEXT = 'A person cannot decide on a demand form they raised or requested.';
                END IF;
              END",
 

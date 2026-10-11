@@ -54,25 +54,37 @@ class Notifier
             return;
         }
 
-        $demand->loadMissing('raisedBy');
+        $demand->loadMissing(['raisedBy', 'requestedBy']);
+        $excluded = array_values(array_filter([$demand->raised_by_id, $demand->requested_by_id]));
 
         $this->send(
-            // Never the person who raised it: they cannot decide on their own
+            // Never the person who raised or requested it: they cannot decide on their own
             // form, so telling them it needs a decision would be a lie.
-            $this->postedAtTier($demand->current_tier)->except([$demand->raised_by_id]),
+            $this->postedAtTier($demand->current_tier)->except($excluded),
             fn (Tenant $t) => DemandAwaitingYou::for($t, $demand),
         );
     }
 
-    /** The person who raised it, once somebody has decided. */
+    /** The person who raised or requested it, once somebody has decided. */
     public function demandDecided(DemandForm $demand, string $outcome, User $decidedBy, ?string $reason = null): void
     {
-        if ($demand->raised_by_id === $decidedBy->id) {
+        $demand->loadMissing(['raisedBy', 'requestedBy']);
+
+        $recipients = collect([$demand->raisedBy]);
+        if ($demand->requestedBy && $demand->requested_by_id !== $demand->raised_by_id) {
+            $recipients->push($demand->requestedBy);
+        }
+
+        $recipients = $recipients->filter()
+            ->reject(fn ($u) => $u->id === $decidedBy->id)
+            ->unique('id');
+
+        if ($recipients->isEmpty()) {
             return;
         }
 
         $this->send(
-            collect([$demand->raisedBy]),
+            $recipients,
             fn (Tenant $t) => new DemandDecided(
                 $t, $demand->id, $demand->ref, $outcome, $decidedBy->full_name, $reason,
             ),

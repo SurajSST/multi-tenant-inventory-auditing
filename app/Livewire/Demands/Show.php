@@ -42,9 +42,9 @@ class Show extends Component
         $user = auth()->user();
 
         abort_unless(
-            $user->seesEverything() || $demand->raised_by_id === $user->id || $user->approval_tier > 0,
+            $user->seesEverything() || $demand->raised_by_id === $user->id || $demand->requested_by_id === $user->id || $user->approval_tier > 0,
             403,
-            'You can only open demand forms you raised, or ones that come to you to decide.'
+            'You can only open demand forms you raised or requested, or ones that come to you to decide.'
         );
 
         return view('livewire.demands.show', [

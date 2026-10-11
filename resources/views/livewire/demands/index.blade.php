@@ -87,9 +87,14 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-3.5">
-                                    <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy->full_name }}</span>
-                                    @if ($demand->raisedBy->designation)
-                                        <span class="block text-xs text-slate-500 dark:text-slate-400">{{ $demand->raisedBy->designation }}</span>
+                                    @if ($demand->requested_by_id && $demand->requested_by_id !== $demand->raised_by_id && $demand->requestedBy)
+                                        <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->requestedBy->full_name }}</span>
+                                        <span class="block text-xs text-slate-500 dark:text-slate-400">via {{ $demand->raisedBy->full_name }}</span>
+                                    @else
+                                        <span class="font-medium text-slate-900 dark:text-slate-100">{{ $demand->raisedBy->full_name }}</span>
+                                        @if ($demand->raisedBy->designation)
+                                            <span class="block text-xs text-slate-500 dark:text-slate-400">{{ $demand->raisedBy->designation }}</span>
+                                        @endif
                                     @endif
                                 </td>
                                 <td class="px-3 py-3.5 text-center whitespace-nowrap">

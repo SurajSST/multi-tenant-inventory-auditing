@@ -55,8 +55,14 @@ class DemandService
     /**
      * @param  array<int, array{item_type_id?: string|null, item_name: string, quantity: int, unit_rate: string|float, specification?: string|null}>  $lines
      */
-    public function create(array $lines, string $department, string $justification, User $user, ?string $needByDate = null): DemandForm
-    {
+    public function create(
+        array $lines,
+        string $department,
+        string $justification,
+        User $user,
+        ?string $needByDate = null,
+        ?string $requestedById = null,
+    ): DemandForm {
         Gate::forUser($user)->authorize('raise-demands');
 
         $tiers = $this->tiers();
@@ -91,13 +97,14 @@ class DemandService
 
         $finalTier = $this->finalTierFor($total);
 
-        $demand = DB::transaction(function () use ($prepared, $department, $justification, $needByDate, $user, $total, $tiers, $finalTier) {
+        $demand = DB::transaction(function () use ($prepared, $department, $justification, $needByDate, $requestedById, $user, $total, $tiers, $finalTier) {
             ['ref' => $ref, 'fiscal_year' => $fiscalYear] = RefCounter::next('DF');
 
             $demand = DemandForm::create([
                 'ref' => $ref,
                 'fiscal_year' => $fiscalYear,
                 'raised_by_id' => $user->id,
+                'requested_by_id' => $requestedById ?: null,
                 'department' => $department,
                 'justification' => $justification,
                 'need_by_date' => $needByDate ?: null,
@@ -111,18 +118,20 @@ class DemandService
 
             $demand->lines()->createMany($prepared->all());
 
+            $beneficiaryName = null;
+            if ($requestedById && $requestedById !== $user->id) {
+                $beneficiaryName = User::find($requestedById)?->full_name;
+            }
+
+            $detail = $beneficiaryName
+                ? sprintf('%s raised by %s on behalf of %s for %s; must reach tier %d (%s)', $ref, $user->full_name, $beneficiaryName, Money::npr($total), $finalTier->tier_no, $finalTier->decider_label)
+                : sprintf('%s raised by %s for %s; must reach tier %d (%s)', $ref, $user->full_name, Money::npr($total), $finalTier->tier_no, $finalTier->decider_label);
+
             $this->audit->record(
                 action: 'DEMAND_RAISED',
                 entity: 'demand_forms',
                 entityId: $demand->id,
-                detail: sprintf(
-                    '%s raised by %s for %s; must reach tier %d (%s)',
-                    $ref,
-                    $user->full_name,
-                    Money::npr($total),
-                    $finalTier->tier_no,
-                    $finalTier->decider_label,
-                ),
+                detail: $detail,
                 actor: $user,
                 after: ['ref' => $ref, 'total' => $total, 'lines' => $prepared->count()],
             );
@@ -138,7 +147,7 @@ class DemandService
     }
 
     /**
-     * Non-privileged users see only the forms they raised. Super Admin,
+     * Non-privileged users see only the forms they raised or requested. Super Admin,
      * Accounts, Chairman and the Purchase Officer see all of them.
      */
     public function list(User $user, ?DemandStatus $status = null, bool $mineOnly = false, ?string $department = null, ?string $search = null, int $perPage = 25): LengthAwarePaginator
@@ -146,7 +155,12 @@ class DemandService
         return DemandForm::query()
             ->when($status, fn ($q) => $q->where('status', $status))
             ->when($department, fn ($q) => $q->where('department', $department))
-            ->when($mineOnly || ! $user->seesEverything(), fn ($q) => $q->where('raised_by_id', $user->id))
+            ->when($mineOnly || ! $user->seesEverything(), function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    $sub->where('raised_by_id', $user->id)
+                        ->orWhere('requested_by_id', $user->id);
+                });
+            })
             ->when($search, function ($q, $search) {
                 $search = trim($search);
                 $q->where(function ($sub) use ($search) {
@@ -154,6 +168,7 @@ class DemandService
                         ->orWhere('department', 'like', "%{$search}%")
                         ->orWhere('justification', 'like', "%{$search}%")
                         ->orWhereHas('raisedBy', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
+                        ->orWhereHas('requestedBy', fn ($u) => $u->where('full_name', 'like', "%{$search}%"))
                         ->orWhereHas('lines', fn ($l) => $l->where('item_name', 'like', "%{$search}%"));
                 });
             })
@@ -162,6 +177,7 @@ class DemandService
             ->withCount('lines')
             ->with([
                 'raisedBy:id,full_name', 'raisedBy.currentMembership',
+                'requestedBy:id,full_name', 'requestedBy.currentMembership',
                 'approvals.actor:id,full_name', 'approvals.actor.currentMembership',
                 'orders:id,ref,demand_id,status',
             ])
@@ -181,8 +197,13 @@ class DemandService
             ->where('current_tier', $user->approval_tier)
             // Their own requests never appear — they could not decide on them anyway.
             ->where('raised_by_id', '!=', $user->id)
+            ->where(function ($q) use ($user) {
+                $q->whereNull('requested_by_id')
+                    ->orWhere('requested_by_id', '!=', $user->id);
+            })
             ->with([
                 'raisedBy', 'raisedBy.currentMembership',
+                'requestedBy', 'requestedBy.currentMembership',
                 'lines.itemType',
                 'approvals.actor', 'approvals.actor.currentMembership',
             ])
@@ -194,6 +215,7 @@ class DemandService
     {
         return DemandForm::with([
             'raisedBy', 'raisedBy.currentMembership',
+            'requestedBy', 'requestedBy.currentMembership',
             'lines.itemType',
             'approvals.actor', 'approvals.actor.currentMembership',
             'orders.vendor',
@@ -231,8 +253,8 @@ class DemandService
                 ]);
             }
 
-            if ($demand->raised_by_id === $user->id) {
-                throw new AuthorizationException('You raised this request, so you cannot decide on it.');
+            if ($demand->raised_by_id === $user->id || $demand->requested_by_id === $user->id) {
+                throw new AuthorizationException('You raised or requested this requisition, so you cannot decide on it.');
             }
 
             if ($user->approval_tier !== $demand->current_tier) {
@@ -353,9 +375,9 @@ class DemandService
             // would land in whichever order they finished in.
             $demand = DemandForm::lockForUpdate()->findOrFail($demandId);
 
-            if ($demand->raised_by_id !== $user->id && ! $user->hasRole(Role::SUPER_ADMIN)) {
+            if ($demand->raised_by_id !== $user->id && $demand->requested_by_id !== $user->id && ! $user->hasRole(Role::SUPER_ADMIN)) {
                 throw new AuthorizationException(
-                    'Only the person who raised it, or the Super Admin, can withdraw it.'
+                    'Only the person who raised or requested it, or the Super Admin, can withdraw it.'
                 );
             }
 

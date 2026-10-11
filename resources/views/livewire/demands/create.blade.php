@@ -6,7 +6,7 @@
 
     <form wire:submit="save" class="space-y-6">
 
-        <x-card title="The request">
+        <x-card title="The request" :allow-overflow="true">
             <div class="grid gap-5 sm:grid-cols-2">
                 <x-field label="Department" for="departmentSelect" required :error="$errors->first('department')">
                     <x-select id="departmentSelect" wire:model.live="departmentSelect">
@@ -23,6 +23,15 @@
                         <x-input id="customDepartment" wire:model.live.debounce.300ms="customDepartment" placeholder="e.g. Robotics Club" />
                     </x-field>
                 @endif
+
+                <x-field label="Requested on behalf of (Staff)" for="requestedById"
+                         hint="Search staff name or designation. Leave blank if raising for yourself."
+                         :error="$errors->first('requestedById')">
+                    <x-search-select id="requestedById"
+                                     wire:model.live="requestedById"
+                                     :options="$this->staffOptions"
+                                     placeholder="Myself ({{ auth()->user()->full_name }})" />
+                </x-field>
 
                 <x-field label="Needed by" for="needByDate" hint="Optional." :error="$errors->first('needByDate')">
                     <x-input id="needByDate" type="date" wire:model="needByDate" />

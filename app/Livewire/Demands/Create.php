@@ -4,8 +4,10 @@ namespace App\Livewire\Demands;
 
 use App\Models\DemandForm;
 use App\Models\ItemType;
+use App\Models\TenantUser;
 use App\Services\DemandService;
 use App\Support\Money;
+use App\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -28,8 +30,60 @@ class Create extends Component
 
     public string $needByDate = '';
 
+    public string $requestedById = '';
+
     /** @var array<int, array{row_id: string, item_type_id: string, item_name: string, quantity: string, unit_rate: string, specification: string}> */
     public array $lines = [];
+
+    #[Computed]
+    public function staffMembers(): Collection
+    {
+        $currentUser = auth()->user();
+
+        return TenantUser::query()
+            ->where('tenant_id', app(TenantContext::class)->idOrFail())
+            ->active()
+            ->whereHas('user', fn ($u) => $u->where('is_platform_owner', false))
+            ->with('user:id,full_name,email')
+            ->get()
+            ->filter(function (TenantUser $tu) use ($currentUser) {
+                if (! $tu->user) {
+                    return false;
+                }
+                if ($currentUser && ($tu->user_id === $currentUser->id || strcasecmp(trim($tu->user->full_name), trim($currentUser->full_name)) === 0)) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->unique(fn (TenantUser $tu) => strtolower(trim($tu->user->full_name)))
+            ->map(function (TenantUser $tu) {
+                return [
+                    'id' => $tu->user_id,
+                    'name' => $tu->user ? ($tu->user->full_name.($tu->designation ? ' · '.$tu->designation : '')) : 'Staff',
+                ];
+            })
+            ->sortBy('name')
+            ->values();
+    }
+
+    #[Computed]
+    public function staffOptions(): array
+    {
+        $currentUser = auth()->user();
+
+        $options = $this->staffMembers->map(fn ($s) => [
+            'value' => $s['id'],
+            'label' => $s['name'],
+        ])->all();
+
+        return array_merge([
+            [
+                'value' => '',
+                'label' => 'Myself ('.($currentUser?->full_name ?? 'Staff').')',
+            ],
+        ], $options);
+    }
 
     #[Computed]
     public function departments(): array
@@ -201,6 +255,7 @@ class Create extends Component
             'department' => ['required', 'string', 'max:120'],
             'justification' => ['required', 'string', 'min:10', 'max:2000'],
             'needByDate' => ['nullable', 'date'],
+            'requestedById' => ['nullable', 'string', 'exists:users,id'],
             'lines' => ['required', 'array', 'min:1'],
             'lines.*.item_name' => ['required', 'string', 'max:180'],
             'lines.*.quantity' => ['required', 'integer', 'min:1'],
@@ -228,6 +283,7 @@ class Create extends Component
             justification: trim($this->justification),
             user: auth()->user(),
             needByDate: $this->needByDate ?: null,
+            requestedById: $this->requestedById ?: null,
         );
 
         $this->dispatch('toast',

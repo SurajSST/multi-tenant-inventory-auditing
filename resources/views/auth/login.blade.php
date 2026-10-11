@@ -1,6 +1,15 @@
 <x-layouts.guest title="Sign in">
     <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Sign in</h2>
-    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Use the account the Super Admin created for you.</p>
+    @if (session('status'))
+        <div class="mt-4 rounded-lg bg-emerald-50 border border-emerald-200/60 p-3.5 text-sm font-medium text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-300">
+            <div class="flex items-start gap-2.5">
+                <svg class="size-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>{{ session('status') }}</span>
+            </div>
+        </div>
+    @endif
 
     <form method="POST" action="{{ route('login.store') }}" class="mt-6 space-y-5">
         @csrf
@@ -14,7 +23,12 @@
         </div>
 
         <div x-data="{ show: false }">
-            <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+            <div class="flex items-center justify-between">
+                <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
+                <a href="{{ route('password.request') }}" class="text-xs font-medium text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-300 transition-colors">
+                    Forgot password?
+                </a>
+            </div>
             <div class="relative mt-1.5">
                 <input id="password" name="password" type="password" :type="show ? 'text' : 'password'" required autocomplete="current-password"
                        class="block w-full rounded-lg border-slate-300 pr-10 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-900 dark:border-white/10 dark:text-white" />

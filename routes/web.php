@@ -3,6 +3,7 @@
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -14,6 +15,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('login', [LoginController::class, 'create'])->name('login');
     Route::post('login', [LoginController::class, 'store'])->name('login.store');
+
+    Route::get('forgot-password', [PasswordResetController::class, 'request'])->name('password.request');
+    Route::post('forgot-password', [PasswordResetController::class, 'email'])->name('password.email');
+    Route::get('reset-password/{token}', [PasswordResetController::class, 'reset'])->name('password.reset');
+    Route::post('reset-password', [PasswordResetController::class, 'update'])->name('password.store');
 });
 
 Route::post('logout', [LoginController::class, 'destroy'])->name('logout');
