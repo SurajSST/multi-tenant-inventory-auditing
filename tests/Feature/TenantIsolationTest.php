@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Http\Middleware\ResolveTenant;
 use App\Livewire\Platform\Schools;
 use App\Livewire\Setup;
+use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\DemandForm;
 use App\Models\DemandLine;
@@ -19,6 +20,7 @@ use App\Models\Tenant;
 use App\Models\TenantUser;
 use App\Models\User;
 use App\Models\Vendor;
+use App\Services\AuditLogger;
 use App\Services\BillService;
 use App\Services\DemandService;
 use App\Services\InventoryService;
@@ -102,15 +104,54 @@ class TenantIsolationTest extends TestCase
     {
         $demand = $this->raiseDemandInPrativa();
 
-        $this->inEverest(function () use ($demand) {
+        $prativaLog = app(AuditLogger::class)->record(
+            action: 'DEMAND_RAISED',
+            entity: 'demand_forms',
+            entityId: $demand->id,
+            detail: 'Prativa demand initiated',
+            actor: $this->staff('p.karki@prativa.edu.np'),
+        );
+
+        $this->inEverest(function () use ($demand, $prativaLog) {
             $this->assertNull(DemandForm::find($demand->id), 'A demand leaked between schools.');
+            $this->assertNull(AuditLog::find($prativaLog->id), 'An audit log leaked between schools.');
             $this->assertSame(0, DemandForm::count());
             $this->assertSame(0, Bill::count());
             $this->assertSame(0, PettyCashToken::count());
+            $this->assertSame(0, AuditLog::count());
+
+            $everestDashboard = app(ReportService::class)->dashboard($this->everestAdmin());
+            $this->assertTrue($everestDashboard['recent_activity']->isEmpty());
         });
 
         // And back the other way, so this is isolation rather than an empty school.
         $this->assertSame(1, DemandForm::count());
+        $this->assertNotNull(AuditLog::find($prativaLog->id));
+        $prativaDashboard = app(ReportService::class)->dashboard($this->staff('md@prativa.edu.np'));
+        $this->assertTrue($prativaDashboard['recent_activity']->contains('id', $prativaLog->id));
+    }
+
+    public function test_audit_entities_cache_is_isolated_per_tenant(): void
+    {
+        $person = $this->staff('accounts@prativa.edu.np');
+
+        // Give the person a posting in Everest as well
+        $this->inEverest(fn () => TenantUser::create([
+            'tenant_id' => $this->everest->id,
+            'user_id' => $person->id,
+            'staff_code' => 'EEA-099',
+            'designation' => 'Accounts Officer',
+            'approval_tier' => 0,
+        ])->syncRoles([Role::ACCOUNTS->value]));
+
+        // Prime cache in Prativa
+        cache()->put('audit_entities_'.$this->prativa->id.'_user_'.$person->id, ['prativa_secret_entity'], 600);
+
+        // In Everest, accessing audit trail must not read Prativa's cached entities
+        $this->inEverest(function () use ($person) {
+            $cacheKey = 'audit_entities_'.$this->everest->id.'_user_'.$person->id;
+            $this->assertNull(cache()->get($cacheKey));
+        });
     }
 
     public function test_the_stock_register_never_crosses_one_schools_items_with_anothers_blocks(): void

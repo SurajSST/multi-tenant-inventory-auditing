@@ -234,21 +234,32 @@
             </x-card>
         @endif
 
-        <x-card title="Recent activity" subtitle="Who did what, most recent first" :flush="true">
+        <x-card :title="auth()->user()?->canViewAllAuditTrail() ? 'Recent activity' : 'My recent activity'"
+                :subtitle="auth()->user()?->canViewAllAuditTrail() ? 'Who did what, most recent first' : 'Your recent actions, most recent first'"
+                :flush="true">
             @can('view-audit-trail')
                 <x-slot:actions>
-                    <a href="{{ route('audit.index') }}" wire:navigate class="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-300 dark:hover:text-sky-400">
-                        Audit trail →
+                    <a href="{{ route('audit.index') }}" wire:navigate class="text-xs font-semibold text-indigo-600 hover:text-indigo-500 dark:text-sky-400 dark:hover:text-sky-300">
+                        {{ auth()->user()?->canViewAllAuditTrail() ? 'Audit trail →' : 'My activity trail →' }}
                     </a>
                 </x-slot:actions>
             @endcan
 
             <ul class="divide-y divide-slate-100 dark:divide-white/5">
                 @forelse ($stats['recent_activity']->take(7) as $entry)
+                    @php
+                        $actorName = $entry->actor?->full_name ?? 'System';
+                        $detail = $entry->detail;
+                        if (str_starts_with($detail, $actorName . ': ')) {
+                            $detail = substr($detail, strlen($actorName . ': '));
+                        } elseif (str_starts_with($detail, $actorName . ' ')) {
+                            $detail = substr($detail, strlen($actorName . ' '));
+                        }
+                    @endphp
                     <li class="flex items-baseline gap-2 px-5 py-3 text-[13px]">
                         <span class="min-w-0 flex-1">
-                            <span class="font-medium text-slate-900 dark:text-slate-100">{{ $entry->actor?->full_name ?? 'System' }}</span>
-                            <span class="text-slate-500 dark:text-slate-500"> {{ $entry->detail }}</span>
+                            <span class="font-medium text-slate-900 dark:text-slate-100">{{ $actorName }}</span>
+                            <span class="text-slate-500 dark:text-slate-500"> {{ $detail }}</span>
                         </span>
                         <time class="tnum shrink-0 text-[11px] text-slate-400 dark:text-slate-600">{{ $entry->at->diffForHumans(short: true) }}</time>
                     </li>

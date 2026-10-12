@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\DemandForm;
 use App\Models\PettyCashToken;
+use App\Models\User;
 use App\Support\Money;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
@@ -32,8 +33,11 @@ class ReportService
         return $this->tenant->idOrFail();
     }
 
-    public function dashboard(): array
+    public function dashboard(?User $user = null): array
     {
+        $user ??= auth()->user();
+        $canViewAll = $user?->canViewAllAuditTrail() ?? true;
+
         $units = $this->unitsOnRegisterByLifespan();
 
         $billStats = DB::table('bills')
@@ -53,7 +57,11 @@ class ReportService
                 ->whereDoesntHave('orders')->count(),
             'by_category' => $this->stockByCategory(),
             'low_stock' => $this->inventory->lowStock(),
-            'recent_activity' => AuditLog::with(['actor', 'actor.currentMembership'])->orderByDesc('at')->limit(15)->get(),
+            'recent_activity' => AuditLog::with(['actor', 'actor.currentMembership'])
+                ->when(! $canViewAll && $user, fn ($q) => $q->where('actor_id', $user->id))
+                ->orderByDesc('at')
+                ->limit(15)
+                ->get(),
         ];
     }
 

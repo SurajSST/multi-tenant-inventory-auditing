@@ -73,7 +73,7 @@ class Index extends Component
         $tenantId = app(TenantContext::class)->id();
         $cacheKey = $canViewAll
             ? 'audit_entities_'.($tenantId ?? 'all')
-            : 'audit_entities_user_'.$user->id;
+            : 'audit_entities_'.($tenantId ?? 'none').'_user_'.$user->id;
 
         $entities = cache()->get($cacheKey);
 
@@ -92,7 +92,7 @@ class Index extends Component
             // People posted to THIS school. Only higher tiers get the chooser.
             'actors' => $canViewAll
                 ? User::query()
-                    ->when($tenantId, fn ($q) => $q->whereHas('memberships', fn ($m) => $m->where('tenant_id', $tenantId)))
+                    ->when($tenantId, fn ($q) => $q->whereHas('memberships', fn ($m) => $m->where('tenant_id', $tenantId)), fn ($q) => $q->whereRaw('0 = 1'))
                     ->with('currentMembership')
                     ->orderBy('full_name')
                     ->get(['id', 'full_name'])

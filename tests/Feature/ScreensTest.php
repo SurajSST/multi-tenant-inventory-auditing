@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ItemType;
 use App\Models\User;
+use App\Services\AuditLogger;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -81,10 +82,80 @@ class ScreensTest extends TestCase
 
     public function test_a_teacher_sees_only_their_own_activity_in_the_audit_trail(): void
     {
-        $this->actingAs($this->staff('p.karki@prativa.edu.np'))
+        $teacher = $this->staff('p.karki@prativa.edu.np');
+        $md = $this->staff('md@prativa.edu.np');
+
+        app(AuditLogger::class)->record(
+            action: 'DEMAND_APPROVED',
+            entity: 'demand_forms',
+            entityId: null,
+            detail: 'Managing Director approved high-value demand #999',
+            actor: $md,
+        );
+
+        app(AuditLogger::class)->record(
+            action: 'ITEM_COUNTED',
+            entity: 'stock_count_entries',
+            entityId: null,
+            detail: 'Teacher counted Grade 8 chairs',
+            actor: $teacher,
+        );
+
+        $this->actingAs($teacher)
             ->get('/audit-trail')
             ->assertOk()
-            ->assertSee('My Activity Trail');
+            ->assertSee('My Activity Trail')
+            ->assertSee('Teacher counted Grade 8 chairs')
+            ->assertDontSee('Managing Director approved high-value demand #999');
+    }
+
+    public function test_normal_staff_sees_only_their_own_recent_activity_on_dashboard_and_never_other_users(): void
+    {
+        $teacher = $this->staff('p.karki@prativa.edu.np');
+        $md = $this->staff('md@prativa.edu.np');
+
+        app(AuditLogger::class)->record(
+            action: 'PASSWORD_CHANGED',
+            entity: 'users',
+            entityId: $md->id,
+            detail: 'Managing Director changed private credentials and tokens',
+            actor: $md,
+        );
+
+        app(AuditLogger::class)->record(
+            action: 'DEMAND_RAISED',
+            entity: 'demand_forms',
+            entityId: null,
+            detail: 'Teacher requested lab notebooks',
+            actor: $teacher,
+        );
+
+        $this->actingAs($teacher)
+            ->get('/')
+            ->assertOk()
+            ->assertSee('My recent activity')
+            ->assertSee('Teacher requested lab notebooks')
+            ->assertDontSee('Managing Director changed private credentials and tokens');
+    }
+
+    public function test_leadership_sees_all_recent_activity_on_dashboard(): void
+    {
+        $teacher = $this->staff('p.karki@prativa.edu.np');
+        $md = $this->staff('md@prativa.edu.np');
+
+        app(AuditLogger::class)->record(
+            action: 'DEMAND_RAISED',
+            entity: 'demand_forms',
+            entityId: null,
+            detail: 'Teacher requested stationery',
+            actor: $teacher,
+        );
+
+        $this->actingAs($md)
+            ->get('/')
+            ->assertOk()
+            ->assertSee('Recent activity')
+            ->assertSee('Teacher requested stationery');
     }
 
     public function test_an_accountant_sees_only_their_own_activity_in_the_audit_trail(): void
@@ -118,7 +189,7 @@ class ScreensTest extends TestCase
             ->assertOk();
 
         // Simulate corrupted or non-array cached value (e.g. unserialized __PHP_Incomplete_Class or object)
-        cache()->put('audit_entities_user_'.$teacher->id, new \stdClass, 600);
+        cache()->put('audit_entities_'.$this->tenant->id.'_user_'.$teacher->id, new \stdClass, 600);
 
         $this->actingAs($teacher)
             ->get('/audit-trail')
