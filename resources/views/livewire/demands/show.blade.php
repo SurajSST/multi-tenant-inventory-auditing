@@ -530,18 +530,27 @@
 
         if ($demand->isPending()) {
             $nextTier = $tiers->firstWhere('tier_no', $demand->current_tier);
-            $demandSignatures[] = [
-                'role' => 'Recommending (सिफारिसकर्ता)',
-                'name' => $nextTier ? $nextTier->decider_label : 'Pending',
-                'designation' => 'Tier ' . $demand->current_tier,
-                'date' => '_______________',
-            ];
-            $demandSignatures[] = [
-                'role' => 'Final Approval (स्वीकृतकर्ता)',
-                'name' => 'Principal / Head of School',
-                'designation' => 'Final Tier Approval',
-                'date' => '_______________',
-            ];
+            if ($demand->current_tier < $demand->final_tier) {
+                $demandSignatures[] = [
+                    'role' => 'Recommending (सिफारिसकर्ता)',
+                    'name' => $nextTier ? $nextTier->decider_label : 'Pending',
+                    'designation' => 'Tier ' . $demand->current_tier,
+                    'date' => '_______________',
+                ];
+                $demandSignatures[] = [
+                    'role' => 'Final Approval (स्वीकृतकर्ता)',
+                    'name' => 'Principal / Head of School',
+                    'designation' => 'Final Tier ' . $demand->final_tier,
+                    'date' => '_______________',
+                ];
+            } else {
+                $demandSignatures[] = [
+                    'role' => 'Final Approval (स्वीकृतकर्ता)',
+                    'name' => $nextTier ? $nextTier->decider_label : 'Pending Final Approval',
+                    'designation' => 'Tier ' . $demand->final_tier,
+                    'date' => '_______________',
+                ];
+            }
         } elseif ($demand->approvals->where('tier_no', $demand->final_tier)->isEmpty()) {
             $demandSignatures[] = [
                 'role' => 'Final Approved By (स्वीकृतकर्ता)',

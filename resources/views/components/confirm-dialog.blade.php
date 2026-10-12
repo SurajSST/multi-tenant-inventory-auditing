@@ -16,10 +16,11 @@
         {{ $slot }}
     </button>
 
-    <div x-cloak x-show="open" x-transition.opacity
-         class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm"
-         x-on:click.self="open = false"
-         role="presentation">
+    <template x-teleport="body">
+        <div x-cloak x-show="open" x-transition.opacity
+             class="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm"
+             x-on:click.self="open = false"
+             role="presentation">
             <section x-show="open" x-transition
                      x-on:click.stop
                      role="alertdialog" aria-modal="true" aria-labelledby="{{ $titleId }}"
@@ -50,7 +51,7 @@
                             class="inline-flex min-h-10 items-center justify-center rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
                         Cancel
                     </button>
-                    <button type="button" x-on:click="open = false; $wire.$call(action, ...params)"
+                    <button type="button" x-on:click="$wire.$call(action, ...params); open = false"
                             @class([
                                 'inline-flex min-h-10 items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
                                 'bg-rose-600 hover:bg-rose-500 focus-visible:outline-rose-600 dark:bg-rose-500 dark:hover:bg-rose-400' => $tone === 'danger',
@@ -60,5 +61,6 @@
                     </button>
                 </footer>
             </section>
-    </div>
+        </div>
+    </template>
 </span>

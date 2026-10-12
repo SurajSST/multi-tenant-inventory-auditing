@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\DemandApprovalMode;
 use App\Models\ApprovalTier;
 use App\Models\AppSetting;
 use App\Models\User;
@@ -17,6 +18,8 @@ class SettingService
     public const SCHOOL_NAME = 'school_name';
 
     public const ALLOW_ORDER_ABOVE_APPROVAL = 'allow_order_above_approval';
+
+    public const DEMAND_APPROVAL_MODE = 'demand_approval_mode';
 
     private array $memoSettings = [];
 
@@ -49,6 +52,13 @@ class SettingService
     public function allowOrderAboveApproval(): bool
     {
         return (bool) $this->get(self::ALLOW_ORDER_ABOVE_APPROVAL, true);
+    }
+
+    public function demandApprovalMode(): DemandApprovalMode
+    {
+        $val = $this->get(self::DEMAND_APPROVAL_MODE, DemandApprovalMode::SEQUENTIAL->value);
+
+        return DemandApprovalMode::tryFrom($val) ?? DemandApprovalMode::SEQUENTIAL;
     }
 
     public function set(string $key, mixed $value, ?User $actor = null): AppSetting

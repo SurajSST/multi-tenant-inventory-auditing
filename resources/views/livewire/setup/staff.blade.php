@@ -35,13 +35,10 @@
         </x-sheet>
     @endif
 
-    <x-field label="Search staff" for="staffSearch" class="mb-5 max-w-md">
-        <x-input id="staffSearch" type="search" wire:model.live.debounce.300ms="search" placeholder="Name, staff code, or email" />
-    </x-field>
-
     @if ($showForm)
         <x-sheet :title="$editingId ? 'Edit staff posting' : 'Add staff member'" wireClose="cancel" maxWidth="max-w-4xl">
-            <p class="mb-5 text-sm text-slate-500 dark:text-slate-400">Account details and permissions apply to this school only.</p>
+            <p class="mb-4 text-sm text-slate-500 dark:text-slate-400">Account details and permissions apply to this school only.</p>
+            <x-errors class="mb-5" />
             <form id="staff-posting-form" wire:submit="save">
                 <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     <x-field label="Staff code" for="staffCode" required :error="$errors->first('staffCode')">
@@ -155,7 +152,7 @@
                 <div class="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p class="text-xs leading-relaxed text-slate-500 dark:text-slate-400">Permissions and activity are recorded in this school’s audit trail.</p>
                     <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
-                        <x-button type="submit" form="staff-posting-form" busy="save" class="w-full sm:w-auto">{{ $editingId ? 'Save changes' : 'Create account' }}</x-button>
+                        <x-button wire:click="save" busy="save" class="w-full sm:w-auto">{{ $editingId ? 'Save changes' : 'Create account' }}</x-button>
                         <x-button variant="secondary" wire:click="cancel" class="w-full sm:w-auto">Cancel</x-button>
                     </div>
                 </div>
@@ -183,7 +180,7 @@
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-white/5">
                     @foreach ($staff as $person)
-                        <tr class="group {{ $person->is_active ? '' : 'opacity-50' }} hover:bg-slate-50 dark:hover:bg-white/5">
+                        <tr wire:key="staff-row-{{ $person->id }}" class="group {{ $person->is_active ? '' : 'opacity-50' }} hover:bg-slate-50 dark:hover:bg-white/5">
                             <td class="px-5 py-3">
                                 <span class="font-medium text-slate-900 dark:text-slate-100">{{ $person->user->full_name }}</span>
                                 @unless ($person->is_active)
@@ -226,6 +223,7 @@
                                                             ? $person->user->full_name.' will no longer be able to work at this school. Their history stays on the record, and their account at other schools is untouched.'
                                                             : 'Let '.$person->user->full_name.' work at this school again?'"
                                                           :confirm-label="$person->is_active ? 'Deactivate staff' : 'Reactivate staff'"
+                                                          :tone="$person->is_active ? 'danger' : 'primary'"
                                                           :trigger-class="'text-xs font-medium '.($person->is_active ? 'text-rose-600 hover:text-rose-500 dark:text-rose-400' : 'text-emerald-600 hover:text-emerald-500 dark:text-emerald-400')">
                                             {{ $person->is_active ? 'Deactivate' : 'Reactivate' }}
                                         </x-confirm-dialog>

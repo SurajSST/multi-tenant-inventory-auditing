@@ -171,7 +171,8 @@ class Staff extends Component
     public function newStaff(): void
     {
         $this->reset([
-            'editingId', 'staffCode', 'fullName', 'designation', 'email',
+            'editingId', 'staffCode', 'fullName', 'designation',
+            'designationSelect', 'customDesignation', 'email',
             'password', 'password_confirmation', 'phone', 'roles', 'approvalTier', 'auditBlocks', 'existingPersonNote',
         ]);
 
@@ -247,6 +248,11 @@ class Staff extends Component
 
     public function save(AuditLogger $audit): void
     {
+        $this->email = trim(strtolower($this->email));
+        $this->staffCode = trim($this->staffCode);
+        $this->fullName = trim($this->fullName);
+        $this->phone = trim($this->phone);
+
         if ($this->designationSelect === 'OTHER') {
             $this->designation = trim($this->customDesignation);
         } elseif ($this->designationSelect !== '') {
@@ -258,6 +264,19 @@ class Staff extends Component
         $existingPerson = $membership ? null : User::where('email', $this->email)->first();
         $isNewPerson = ! $membership && ! $existingPerson;
 
+        // Prevent attaching the same person multiple times to this school when creating
+        if (! $membership) {
+            $alreadyPosted = TenantUser::where('tenant_id', $tenant->id)
+                ->whereHas('user', fn ($u) => $u->where('email', $this->email))
+                ->exists();
+
+            if ($alreadyPosted) {
+                $this->addError('email', 'A staff member with this email already has a posting at this school. Edit their existing record instead.');
+
+                return;
+            }
+        }
+
         $this->validate([
             // Staff codes are this school's own; another school may use the same one.
             'staffCode' => ['required', 'string', 'max:40', Rule::unique('tenant_users', 'staff_code')
@@ -265,7 +284,8 @@ class Staff extends Component
                 ->ignore($membership?->id)],
             'fullName' => ['required', 'string', 'max:120'],
             'designation' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:180'],
+            'email' => ['required', 'email', 'max:180',
+                $membership ? Rule::unique('users', 'email')->ignore($membership->user_id) : 'nullable'],
             'password' => [$isNewPerson ? 'nullable' : 'prohibited', 'string', Password::min(10), 'max:255'],
             'password_confirmation' => ['required_with:password', 'same:password'],
             'phone' => ['nullable', 'string', 'max:40'],
@@ -307,24 +327,33 @@ class Staff extends Component
                     'must_reset_password' => true,
                 ]);
             } else {
-                // Name and phone belong to the person, so they are shared across
+                // Name, email and phone belong to the person, so they are shared across
                 // every school they work at — changing them here changes them
-                // everywhere, which is correct for a name and a phone number.
+                // everywhere, which is correct for personal identity.
                 $person->update([
                     'full_name' => $this->fullName,
+                    'email' => $this->email,
                     'phone' => $this->phone ?: null,
                 ]);
             }
 
-            $membership = TenantUser::updateOrCreate(
-                ['tenant_id' => $tenant->id, 'user_id' => $person->id],
-                [
+            if ($membership) {
+                $membership->update([
                     'staff_code' => $this->staffCode,
                     'designation' => $this->designation,
                     'approval_tier' => $this->approvalTier,
                     'is_active' => true,
-                ],
-            );
+                ]);
+            } else {
+                $membership = TenantUser::create([
+                    'tenant_id' => $tenant->id,
+                    'user_id' => $person->id,
+                    'staff_code' => $this->staffCode,
+                    'designation' => $this->designation,
+                    'approval_tier' => $this->approvalTier,
+                    'is_active' => true,
+                ]);
+            }
 
             $membership->syncRoles($this->roles);
 

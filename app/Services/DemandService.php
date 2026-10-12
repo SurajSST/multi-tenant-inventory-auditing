@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ApprovalAction;
+use App\Enums\DemandApprovalMode;
 use App\Enums\DemandStatus;
 use App\Enums\Role;
 use App\Models\ApprovalTier;
@@ -96,8 +97,12 @@ class DemandService
         }
 
         $finalTier = $this->finalTierFor($total);
+        $mode = $this->settings->demandApprovalMode();
+        $initialTier = ($mode === DemandApprovalMode::DIRECT)
+            ? $finalTier->tier_no
+            : $tiers->first()->tier_no;
 
-        $demand = DB::transaction(function () use ($prepared, $department, $justification, $needByDate, $requestedById, $user, $total, $tiers, $finalTier) {
+        $demand = DB::transaction(function () use ($prepared, $department, $justification, $needByDate, $requestedById, $user, $total, $initialTier, $finalTier) {
             ['ref' => $ref, 'fiscal_year' => $fiscalYear] = RefCounter::next('DF');
 
             $demand = DemandForm::create([
@@ -110,9 +115,8 @@ class DemandService
                 'need_by_date' => $needByDate ?: null,
                 'total_amount' => $total,
                 'status' => DemandStatus::PENDING,
-                // A form always enters at the bottom band and climbs, so every
-                // tier below the deciding one still sees and signs it.
-                'current_tier' => $tiers->first()->tier_no,
+                // Initial tier depends on configured school policy (direct vs sequential/fast-track)
+                'current_tier' => $initialTier,
                 'final_tier' => $finalTier->tier_no,
             ]);
 
@@ -192,9 +196,21 @@ class DemandService
             return collect();
         }
 
+        $mode = $this->settings->demandApprovalMode();
+
         return DemandForm::query()
             ->where('status', DemandStatus::PENDING)
-            ->where('current_tier', $user->approval_tier)
+            ->when($mode === DemandApprovalMode::FAST_TRACK, function ($q) use ($user) {
+                $q->where(function ($sub) use ($user) {
+                    $sub->where('current_tier', $user->approval_tier)
+                        ->orWhere(function ($ft) use ($user) {
+                            $ft->where('current_tier', '<', $user->approval_tier)
+                                ->where('final_tier', '>=', $user->approval_tier);
+                        });
+                });
+            }, function ($q) use ($user) {
+                $q->where('current_tier', $user->approval_tier);
+            })
             // Their own requests never appear — they could not decide on them anyway.
             ->where('raised_by_id', '!=', $user->id)
             ->where(function ($q) use ($user) {
@@ -257,15 +273,23 @@ class DemandService
                 throw new AuthorizationException('You raised or requested this requisition, so you cannot decide on it.');
             }
 
+            $mode = $this->settings->demandApprovalMode();
+            $isFastTrack = false;
+
             if ($user->approval_tier !== $demand->current_tier) {
-                throw new AuthorizationException(sprintf(
-                    'This form is sitting at tier %d. You decide at tier %s.',
-                    $demand->current_tier,
-                    $user->approval_tier ?: 'none',
-                ));
+                if ($mode === DemandApprovalMode::FAST_TRACK && $user->approval_tier > $demand->current_tier && $user->approval_tier <= $demand->final_tier) {
+                    $isFastTrack = true;
+                } else {
+                    throw new AuthorizationException(sprintf(
+                        'This form is sitting at tier %d. You decide at tier %s.',
+                        $demand->current_tier,
+                        $user->approval_tier ?: 'none',
+                    ));
+                }
             }
 
-            $tier = $tiers->firstWhere('tier_no', $demand->current_tier);
+            $decidedTier = $isFastTrack ? $user->approval_tier : $demand->current_tier;
+            $tier = $tiers->firstWhere('tier_no', $decidedTier);
 
             if ($action === ApprovalAction::REJECT && mb_strlen(trim((string) $reason)) < 5) {
                 throw ValidationException::withMessages([
@@ -281,14 +305,14 @@ class DemandService
 
             DemandApproval::create([
                 'demand_id' => $demand->id,
-                'tier_no' => $demand->current_tier,
+                'tier_no' => $decidedTier,
                 'actor_id' => $user->id,
                 'action' => $action,
                 'reason' => $reason,
                 'minute_ref' => $minuteRef,
             ]);
 
-            $decidedAt = $demand->current_tier;
+            $decidedAt = $decidedTier;
 
             if ($action === ApprovalAction::REJECT) {
                 $demand->update([
@@ -314,15 +338,15 @@ class DemandService
                     'closed_at' => now(),
                 ]);
 
+                $detail = $isFastTrack
+                    ? sprintf('%s approved and fast-tracked at tier %d by %s%s', $demand->ref, $decidedAt, $user->full_name, $minuteRef ? " (minute {$minuteRef})" : '')
+                    : sprintf('%s fully approved at tier %d by %s%s', $demand->ref, $decidedAt, $user->full_name, $minuteRef ? " (minute {$minuteRef})" : '');
+
                 $this->audit->record(
                     action: 'DEMAND_APPROVED',
                     entity: 'demand_forms',
                     entityId: $demand->id,
-                    detail: sprintf(
-                        '%s fully approved at tier %d by %s%s',
-                        $demand->ref, $decidedAt, $user->full_name,
-                        $minuteRef ? " (minute {$minuteRef})" : '',
-                    ),
+                    detail: $detail,
                     actor: $user,
                 );
             } else {

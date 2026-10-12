@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Demands;
 
+use App\Enums\DemandApprovalMode;
 use App\Models\DemandForm;
 use App\Models\ItemType;
 use App\Models\TenantUser;
 use App\Services\DemandService;
+use App\Services\SettingService;
 use App\Support\Money;
 use App\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
@@ -241,6 +243,12 @@ class Create extends Component
         }
 
         return app(DemandService::class)->finalTierFor($this->total);
+    }
+
+    #[Computed]
+    public function approvalMode(): DemandApprovalMode
+    {
+        return app(SettingService::class)->demandApprovalMode();
     }
 
     public function save(DemandService $demands): void

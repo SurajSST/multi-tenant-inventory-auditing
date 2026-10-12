@@ -471,8 +471,8 @@
             <td>
                 <div class="sig-line">
                     <p class="sig-role">Tier 1 Verification</p>
-                    <p class="sig-name">{{ $tier1Approval ? $tier1Approval->actor->full_name : 'Verified / Recommended' }}</p>
-                    <p class="sig-date">{{ $tier1Approval ? $tier1Approval->acted_at->format('d M Y') : 'Date: _______________' }}</p>
+                    <p class="sig-name">{{ $tier1Approval ? $tier1Approval->actor->full_name : ($demand->isApproved() ? 'Direct Policy Sanction' : 'Verified / Recommended') }}</p>
+                    <p class="sig-date">{{ $tier1Approval ? $tier1Approval->acted_at->format('d M Y') : ($demand->isApproved() ? 'Direct Sanction' : 'Date: _______________') }}</p>
                 </div>
             </td>
             @if (! $hasSeparateRequester)

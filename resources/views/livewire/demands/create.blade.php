@@ -111,7 +111,13 @@
                                 Tier {{ $this->finalTier->tier_no }} — {{ $this->finalTier->decider_label }}
                             </p>
                             <p class="text-xs text-slate-500 dark:text-slate-500">
-                                It starts at tier 1 and climbs, so every band below signs it too.
+                                @if ($this->approvalMode === \App\Enums\DemandApprovalMode::DIRECT)
+                                    Routes directly to Tier {{ $this->finalTier->tier_no }} ({{ $this->finalTier->decider_label }}) for immediate sanction.
+                                @elseif ($this->approvalMode === \App\Enums\DemandApprovalMode::FAST_TRACK)
+                                    Starts at tier 1, or can be fast-track approved directly by higher tiers.
+                                @else
+                                    It starts at tier 1 and climbs, so every band below signs it too.
+                                @endif
                                 @if ($this->finalTier->requires_minute)
                                     A committee minute reference is required at the top band.
                                 @endif
